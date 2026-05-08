@@ -22,7 +22,7 @@ In order to make this a best place for everyone to contribute, there are some ha
 * This package is open to everyone no matter your race, ethnicity, gender, who you love, etc. To keep it that way, there's zero tolerance for any racist, misogynistic, xenophobic, bigoted, Zionist, antisemitic (yes, there is a difference), Islamophobic, etc. messages. This includes messages sent to a fellow contributor outside this repository. In short, don't be a jerk. Failure to comply will result in a ban from the project.
 * Be respectful when communicating with fellow contributors.
 * Respect the decisions made about what belongs in the package.
-* Work together to make `security-analytics` the best file-upload-security toolkit it can be.
+* Work together to make `security-analytics` the best security-analytics toolkit it can be — event logging, anomaly detection, threat intelligence, SIEM, incident response, alerting, and dashboards.
 
 ## Ways to Contribute
 
@@ -71,8 +71,7 @@ Use this template when you've found a bug. It will ask for:
 - **Screenshots** - If applicable
 
 The template automatically applies these labels:
-- `Type::Bug`
-- `Status::Backlog`
+- `bug`
 
 **You should also add:**
 - `Priority::*` (Critical, High, Medium, or Low) if urgent
@@ -87,8 +86,7 @@ Use this when suggesting new functionality. It will ask for:
 - **Use cases** - How would this be used?
 
 The template automatically applies:
-- `Type::Feature`
-- `Status::Backlog`
+- `enhancement`
 
 ### Enhancement Template
 
@@ -99,8 +97,7 @@ Use this for improvements to existing features. It will ask for:
 - **Backwards compatibility** - Will this break anything?
 
 The template automatically applies:
-- `Type::Enhancement`
-- `Status::Backlog`
+- `enhancement`
 
 ### Task Template
 
@@ -110,7 +107,7 @@ Use this for general tasks that don't fit other categories. It will ask for:
 - **Context** - Why this is needed
 
 The template automatically applies:
-- `Status::Backlog`
+- `task`
 
 ### Submitting Your Issue
 

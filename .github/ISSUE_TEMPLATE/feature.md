@@ -10,7 +10,7 @@ Feature Name:
 Requested By:  
 Owned By:
 
-## What in the Feature
+## Feature description
 
 ## Task
 
