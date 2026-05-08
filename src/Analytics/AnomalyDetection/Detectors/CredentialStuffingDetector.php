@@ -34,7 +34,7 @@ class CredentialStuffingDetector extends AbstractDetector
 
         // Check for credential stuffing patterns
         if ( isset( $data['ip'] ) ) {
-            $anomaly = $this->checkCredentialStuffing( $data['ip'], $data );
+            $anomaly = $this->checkCredentialStuffing( $data['ip'] );
             if ( $anomaly ) {
                 $anomalies->push( $anomaly );
             }
@@ -110,10 +110,8 @@ class CredentialStuffingDetector extends AbstractDetector
 
     /**
      * Check for credential stuffing from specific IP.
-     *
-     * @param  array<string, mixed>  $data
      */
-    protected function checkCredentialStuffing( string $ip, array $data ): ?Anomaly
+    protected function checkCredentialStuffing( string $ip ): ?Anomaly
     {
         $ipKey      = "credential_stuffing:ip:{$ip}";
         $ipAttempts = Cache::get( $ipKey, [] );

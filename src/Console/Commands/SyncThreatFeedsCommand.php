@@ -9,6 +9,7 @@ use ArtisanPackUI\SecurityAnalytics\Models\ThreatIndicator;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
+use Throwable;
 
 class SyncThreatFeedsCommand extends Command
 {
@@ -97,7 +98,10 @@ class SyncThreatFeedsCommand extends Command
             $this->info( "Imported {$imported} indicators from feed." );
 
             return $imported;
-        } catch ( Exception $e ) {
+        } catch ( Throwable $e ) {
+            // Catch Throwable rather than Exception so a TypeError bubbling
+            // out of a malformed feed doesn't take the whole sync down —
+            // the next feed in the loop should still run.
             $this->error( "Error syncing feed: {$e->getMessage()}" );
 
             return 0;
@@ -113,10 +117,13 @@ class SyncThreatFeedsCommand extends Command
     {
         $indicators = [];
 
-        // Try JSON format first
+        // Try JSON format first. json_decode() can return scalar values
+        // (string/int/null) for valid-but-non-array JSON — handing those
+        // to parseJsonFeed(array $data) would throw a TypeError, so guard
+        // for is_array() before delegating.
         $data = json_decode( $content, true );
 
-        if ( JSON_ERROR_NONE === json_last_error() ) {
+        if ( JSON_ERROR_NONE === json_last_error() && is_array( $data ) ) {
             return $this->parseJsonFeed( $data );
         }
 

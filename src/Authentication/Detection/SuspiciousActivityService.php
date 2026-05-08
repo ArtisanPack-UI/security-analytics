@@ -100,7 +100,9 @@ class SuspiciousActivityService implements SuspiciousActivityDetectorInterface
         $currLat = $currentLogin['location']['latitude'] ?? null;
         $currLon = $currentLogin['location']['longitude'] ?? null;
 
-        if ( ! $prevLat || ! $prevLon || ! $currLat || ! $currLon ) {
+        // Use explicit null checks so coordinates of exactly 0 (the
+        // equator / prime meridian) aren't treated as missing data.
+        if ( null === $prevLat || null === $prevLon || null === $currLat || null === $currLon ) {
             return false;
         }
 

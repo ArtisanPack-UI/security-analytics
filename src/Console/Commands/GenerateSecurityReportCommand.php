@@ -9,6 +9,7 @@ use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 
 class GenerateSecurityReportCommand extends Command
 {
@@ -46,22 +47,60 @@ class GenerateSecurityReportCommand extends Command
     {
         $type   = $this->argument( 'type' );
         $format = $this->option( 'format' );
-        $from   = $this->option( 'from' ) ? \Carbon\Carbon::parse( $this->option( 'from' ) ) : now()->subDays( 7 );
-        $to     = $this->option( 'to' ) ? \Carbon\Carbon::parse( $this->option( 'to' ) ) : now();
-
-        $this->info( "Generating {$type} report..." );
-
-        $options = [
-            'from'   => $from,
-            'to'     => $to,
-            'format' => $format,
-        ];
-
-        if ( $this->option( 'user' ) ) {
-            $options['user_id'] = (int) $this->option( 'user' );
-        }
 
         try {
+            // Parse date options inside the try block so invalid input is
+            // caught and surfaced as a friendly error instead of letting
+            // Carbon's exception bubble out of the command.
+            $fromOption = $this->option( 'from' );
+            $toOption   = $this->option( 'to' );
+
+            $from = $fromOption
+                ? \Carbon\Carbon::createFromFormat( 'Y-m-d', $fromOption )
+                : now()->subDays( 7 );
+            $to = $toOption
+                ? \Carbon\Carbon::createFromFormat( 'Y-m-d', $toOption )
+                : now();
+
+            if ( false === $from || null === $from ) {
+                $this->error( "Invalid --from value '{$fromOption}'. Expected YYYY-MM-DD." );
+
+                return Command::FAILURE;
+            }
+
+            if ( false === $to || null === $to ) {
+                $this->error( "Invalid --to value '{$toOption}'. Expected YYYY-MM-DD." );
+
+                return Command::FAILURE;
+            }
+
+            if ( $from->startOfDay()->greaterThan( $to->endOfDay() ) ) {
+                $this->error( "Invalid range: --from ({$from->toDateString()}) is after --to ({$to->toDateString()})." );
+
+                return Command::FAILURE;
+            }
+
+            $this->info( "Generating {$type} report..." );
+
+            $options = [
+                'from'   => $from,
+                'to'     => $to,
+                'format' => $format,
+            ];
+
+            // Validate --user before casting so a non-numeric value doesn't
+            // collapse to 0 and silently disable the user-scoped filter
+            // inside UserActivityReport.
+            $userOption = $this->option( 'user' );
+            if ( null !== $userOption && '' !== $userOption ) {
+                if ( ! is_numeric( $userOption ) ) {
+                    $this->error( "Invalid --user value '{$userOption}'. Expected a numeric user id." );
+
+                    return Command::FAILURE;
+                }
+                $options['user_id'] = (int) $userOption;
+            }
+
             $report = $this->reportGenerator->generate( $type, $options );
 
             if ( ! $report ) {
@@ -85,12 +124,19 @@ class GenerateSecurityReportCommand extends Command
             }
 
             if ( ! $outputPath && empty( $emails ) ) {
-                // Default: save to storage
+                // Default: save to storage. Honor the package-namespaced
+                // config key + verify the write actually succeeded —
+                // Storage::put returns false on failure rather than throwing.
                 $filename    = $this->generateFilename( $type, $format, $from, $to );
-                $storagePath = config( 'security-analytics.reporting.storage_path', 'security-reports' );
+                $storagePath = config( 'artisanpack.security-analytics.reporting.storage_path', 'security-reports' );
                 $fullPath    = "{$storagePath}/{$filename}";
 
-                Storage::put( $fullPath, $content );
+                if ( false === Storage::put( $fullPath, $content ) ) {
+                    $this->error( "Failed to save report to storage at: {$fullPath}" );
+
+                    return Command::FAILURE;
+                }
+
                 $this->info( "Report saved to: {$fullPath}" );
             }
 
@@ -118,7 +164,15 @@ class GenerateSecurityReportCommand extends Command
             $path .= ".{$extension}";
         }
 
-        file_put_contents( $path, $content );
+        // file_put_contents returns false on failure (and the number of
+        // bytes written on success). Throw so the caller's catch block
+        // can surface a clear "Error generating report" message rather
+        // than the previous silent success.
+        $bytes = @file_put_contents( $path, $content );
+        if ( false === $bytes ) {
+            throw new RuntimeException( "Failed to write report to: {$path}" );
+        }
+
         $this->info( "Report saved to: {$path}" );
     }
 

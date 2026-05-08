@@ -82,6 +82,20 @@ class BruteForceDetector extends AbstractDetector
         $cacheKey = "brute_force:ip:{$ip}";
         $attempts = $this->trackAttempt( $cacheKey );
 
+        // Record the target this attempt was aimed at so the anomaly's
+        // `targets` metadata isn't permanently empty. getTargetsFromIp()
+        // reads from this same key.
+        $target = $data['username'] ?? $data['target'] ?? null;
+        if ( null !== $target && '' !== $target ) {
+            $targetsCacheKey = "brute_force:ip_targets:{$ip}";
+            $window          = (int) $this->config['time_window_minutes'];
+            $targets         = Cache::get( $targetsCacheKey, [] );
+            if ( ! in_array( $target, $targets, true ) ) {
+                $targets[] = $target;
+            }
+            Cache::put( $targetsCacheKey, $targets, now()->addMinutes( $window ) );
+        }
+
         if ( $attempts >= $this->config['ip_threshold'] ) {
             $score       = min( 100, ( $attempts / $this->config['ip_threshold'] ) * 60 + 40 );
             $suppressKey = "brute_force_ip_{$ip}";

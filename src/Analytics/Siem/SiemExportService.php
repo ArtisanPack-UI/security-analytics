@@ -372,14 +372,23 @@ class SiemExportService
      */
     protected function sendToExporters( array $event ): array
     {
-        $results = [];
+        $results         = [];
+        $successfulSinks = 0;
 
         foreach ( $this->getEnabledExporters() as $name => $exporter ) {
-            $results[ $name ] = $exporter->export( $event );
+            $result           = $exporter->export( $event );
+            $results[ $name ] = $result;
+            if ( $result['success'] ?? false ) {
+                $successfulSinks++;
+            }
         }
 
+        // Report the actual number of exporters that confirmed delivery
+        // for this event rather than always saying 1 — callers and
+        // downstream metrics need an accurate success signal.
         return [
-            'exported' => 1,
+            'success'  => $successfulSinks > 0,
+            'exported' => $successfulSinks,
             'results'  => $results,
         ];
     }

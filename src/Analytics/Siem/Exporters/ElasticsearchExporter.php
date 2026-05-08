@@ -163,9 +163,15 @@ class ElasticsearchExporter implements SiemExporterInterface
     protected function sendRequest( string $method, string $url, $body, bool $isRawBody = false ): array
     {
         try {
+            // Default timeouts so a slow / hung Elasticsearch endpoint
+            // doesn't block the queue worker indefinitely.
             $http = Http::withHeaders( [
                 'Content-Type' => 'application/json',
-            ] )->withOptions( ['verify' => $this->config['verify_ssl']] );
+            ] )->withOptions( [
+                'verify'          => $this->config['verify_ssl'],
+                'timeout'         => $this->config['timeout'] ?? 10,
+                'connect_timeout' => $this->config['connect_timeout'] ?? 5,
+            ] );
 
             // Add basic auth if configured
             if ( ! empty( $this->config['username'] ) ) {

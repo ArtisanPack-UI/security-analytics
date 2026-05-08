@@ -71,7 +71,7 @@ final class TimeBucket
         return match ( $driver ) {
             'sqlite'           => DB::raw( "strftime('{$format}', {$wrappedColumn}) as period" ),
             'pgsql'            => DB::raw( "to_char({$wrappedColumn}, '{$format}') as period" ),
-            'mysql', 'mariadb' => DB::raw( "DATE_FORMAT({$wrappedColumn}, '{$format}') as period"),
+            'mysql', 'mariadb' => DB::raw( "DATE_FORMAT({$wrappedColumn}, '{$format}') as period" ),
         };
     }
 }
