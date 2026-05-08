@@ -12,6 +12,8 @@ use ArtisanPackUI\SecurityAnalytics\Analytics\Siem\Formatters\EventFormatter;
 use ArtisanPackUI\SecurityAnalytics\Models\Anomaly;
 use ArtisanPackUI\SecurityAnalytics\Models\SecurityIncident;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class SiemExportService
 {
@@ -376,10 +378,26 @@ class SiemExportService
         $successfulSinks = 0;
 
         foreach ( $this->getEnabledExporters() as $name => $exporter ) {
-            $result           = $exporter->export( $event );
-            $results[ $name ] = $result;
-            if ( $result['success'] ?? false ) {
-                $successfulSinks++;
+            // Wrap each sink in try/catch so one bad exporter (HTTP timeout,
+            // serialization error, schema mismatch, etc.) doesn't abort the
+            // remaining sinks for this event. Per-exporter failures show up
+            // in $results so the caller still has full visibility.
+            try {
+                $result           = $exporter->export( $event );
+                $results[ $name ] = $result;
+                if ( $result['success'] ?? false ) {
+                    $successfulSinks++;
+                }
+            } catch ( Throwable $e ) {
+                Log::error( 'SiemExportService: exporter threw on export', [
+                    'exporter' => $name,
+                    'message'  => $e->getMessage(),
+                ] );
+                $results[ $name ] = [
+                    'success' => false,
+                    'error'   => $e->getMessage(),
+                    'code'    => $e->getCode(),
+                ];
             }
         }
 
@@ -409,7 +427,20 @@ class SiemExportService
         $results = [];
 
         foreach ( $this->getEnabledExporters() as $name => $exporter ) {
-            $results[ $name ] = $exporter->exportBatch( $events );
+            try {
+                $results[ $name ] = $exporter->exportBatch( $events );
+            } catch ( Throwable $e ) {
+                Log::error( 'SiemExportService: exporter threw on batch export', [
+                    'exporter' => $name,
+                    'message'  => $e->getMessage(),
+                ] );
+                $results[ $name ] = [
+                    'success'  => false,
+                    'exported' => 0,
+                    'error'    => $e->getMessage(),
+                    'code'     => $e->getCode(),
+                ];
+            }
         }
 
         // Sum the per-exporter acknowledged counts so the reported

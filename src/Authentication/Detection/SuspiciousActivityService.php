@@ -406,15 +406,15 @@ class SuspiciousActivityService implements SuspiciousActivityDetectorInterface
             $lastLoginIp = $user->getAttribute( 'last_login_ip' );
 
             if ( $lastLoginAt && $lastLoginIp ) {
-                $timestamp = $lastLoginAt instanceof DateTimeInterface
-                    ? $lastLoginAt->getTimestamp()
-                    : strtotime( $lastLoginAt );
+                $timestamp = $this->coerceTimestamp( $lastLoginAt );
 
-                return [
-                    'time'     => $timestamp,
-                    'ip'       => $lastLoginIp,
-                    'location' => $this->getLocationFromIp( $lastLoginIp ),
-                ];
+                if ( null !== $timestamp ) {
+                    return [
+                        'time'     => $timestamp,
+                        'ip'       => $lastLoginIp,
+                        'location' => $this->getLocationFromIp( $lastLoginIp ),
+                    ];
+                }
             }
         }
 
@@ -427,19 +427,45 @@ class SuspiciousActivityService implements SuspiciousActivityDetectorInterface
                 ->first();
 
             if ( $lastSession && $lastSession->ip_address ) {
-                $timestamp = $lastSession->created_at instanceof DateTimeInterface
-                    ? $lastSession->created_at->getTimestamp()
-                    : strtotime( $lastSession->created_at );
+                $timestamp = $this->coerceTimestamp( $lastSession->created_at );
 
-                return [
-                    'time'     => $timestamp,
-                    'ip'       => $lastSession->ip_address,
-                    'location' => $lastSession->location ?? $this->getLocationFromIp( $lastSession->ip_address ),
-                ];
+                if ( null !== $timestamp ) {
+                    return [
+                        'time'     => $timestamp,
+                        'ip'       => $lastSession->ip_address,
+                        'location' => $lastSession->location ?? $this->getLocationFromIp( $lastSession->ip_address ),
+                    ];
+                }
             }
         }
 
         return null;
+    }
+
+    /**
+     * Convert a DateTime/string/null timestamp value to a unix timestamp.
+     *
+     * Returns null when the input is unparseable so callers can skip the
+     * detection rather than coerce false-from-strtotime() to 0 (1970)
+     * and trip false positives on every subsequent comparison.
+     */
+    protected function coerceTimestamp( mixed $value ): ?int
+    {
+        if ( null === $value ) {
+            return null;
+        }
+
+        if ( $value instanceof DateTimeInterface ) {
+            return $value->getTimestamp();
+        }
+
+        if ( ! is_string( $value ) || '' === $value ) {
+            return null;
+        }
+
+        $parsed = strtotime( $value );
+
+        return false === $parsed ? null : $parsed;
     }
 
     /**
