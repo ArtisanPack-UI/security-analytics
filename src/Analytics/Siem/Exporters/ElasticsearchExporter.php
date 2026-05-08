@@ -7,6 +7,7 @@ namespace ArtisanPackUI\SecurityAnalytics\Analytics\Siem\Exporters;
 use ArtisanPackUI\SecurityAnalytics\Analytics\Siem\Contracts\SiemExporterInterface;
 use Exception;
 use Illuminate\Support\Facades\Http;
+use JsonException;
 
 class ElasticsearchExporter implements SiemExporterInterface
 {
@@ -88,18 +89,27 @@ class ElasticsearchExporter implements SiemExporterInterface
 
         // Build bulk request body
         $lines = [];
-        foreach ( $events as $event ) {
-            $index = $this->getIndexName( $event );
+        try {
+            foreach ( $events as $event ) {
+                $index = $this->getIndexName( $event );
 
-            // Action line
-            $lines[] = json_encode( [
-                'index' => [
-                    '_index' => $index,
-                ],
-            ] );
+                // Action line — fail fast on encode errors so we don't ship
+                // a malformed NDJSON body that breaks the whole _bulk request.
+                $lines[] = json_encode( [
+                    'index' => [
+                        '_index' => $index,
+                    ],
+                ], JSON_THROW_ON_ERROR );
 
-            // Document line
-            $lines[] = json_encode( $event );
+                // Document line
+                $lines[] = json_encode( $event, JSON_THROW_ON_ERROR );
+            }
+        } catch ( JsonException $e ) {
+            return [
+                'success'  => false,
+                'exported' => 0,
+                'error'    => 'Failed to encode bulk payload: ' . $e->getMessage(),
+            ];
         }
 
         $body = implode( "\n", $lines ) . "\n";
@@ -131,8 +141,13 @@ class ElasticsearchExporter implements SiemExporterInterface
         $hosts = $this->config['hosts'];
         $host  = is_array( $hosts ) ? $hosts[ array_rand( $hosts ) ] : $hosts;
 
-        if ( ! str_starts_with( $host, 'http' ) ) {
-            $host = 'http://' . $host;
+        if ( ! preg_match( '#^https?://#i', $host ) ) {
+            // Default to HTTPS to avoid leaking security events over
+            // plaintext when config omits an explicit scheme. Set
+            // `allow_insecure_http` if you really need cleartext.
+            $host = ( $this->config['allow_insecure_http'] ?? false )
+                ? 'http://' . $host
+                : 'https://' . $host;
         }
 
         return rtrim( $host, '/' );

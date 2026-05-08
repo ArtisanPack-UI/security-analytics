@@ -410,7 +410,7 @@ class SecurityDashboardController extends Controller
             ->selectRaw( 'ip_address, COUNT(*) as count' )
             ->groupBy( 'ip_address' )
             ->orderByDesc( 'count' )
-            ->limit( $limit)
+            ->limit( $limit )
             ->get()
             ->toArray();
     }

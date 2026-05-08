@@ -162,13 +162,16 @@ class BruteForceDetector extends AbstractDetector
         $cacheKey    = "brute_force:distributed:{$userId}";
         $ipsCacheKey = "{$cacheKey}:ips";
 
-        // Track IP
+        // Track IP — and refresh the entry's TTL on every attempt (not just
+        // when adding a new IP). Otherwise the IP set expires before the
+        // attempt counter and trackAttempt() keeps incrementing while the
+        // distributed-attack check sees an empty IP list.
         if ( isset( $data['ip'] ) ) {
             $ips = Cache::get( $ipsCacheKey, [] );
             if ( ! in_array( $data['ip'], $ips, true ) ) {
                 $ips[] = $data['ip'];
-                Cache::put( $ipsCacheKey, $ips, now()->addMinutes( $this->config['time_window_minutes'] ) );
             }
+            Cache::put( $ipsCacheKey, $ips, now()->addMinutes( $this->config['time_window_minutes'] ) );
         }
 
         $attempts = $this->trackAttempt( $cacheKey );
@@ -209,23 +212,36 @@ class BruteForceDetector extends AbstractDetector
      */
     protected function trackAttempt( string $cacheKey, ?string $ip = null ): int
     {
-        $data = Cache::get( $cacheKey, ['count' => 0, 'timestamps' => [], 'ips' => []] );
+        $window = (int) $this->config['time_window_minutes'];
 
-        $data['count']++;
-        $data['timestamps'][] = now()->timestamp;
+        // Run the read-modify-write inside a distributed lock so concurrent
+        // failed-auth attempts (the common case for a brute-force attack)
+        // can't clobber each other's increments and undercount the attack.
+        return Cache::lock( "{$cacheKey}:lock", 5 )->block(
+            2,
+            function () use ( $cacheKey, $ip, $window ): int {
+                $data = Cache::get( $cacheKey, ['count' => 0, 'timestamps' => [], 'ips' => []] );
 
-        if ( $ip && ! in_array( $ip, $data['ips'], true ) ) {
-            $data['ips'][] = $ip;
-        }
+                $data['timestamps'][] = now()->timestamp;
 
-        // Clean old timestamps outside window
-        $cutoff             = now()->subMinutes( $this->config['time_window_minutes'] )->timestamp;
-        $data['timestamps'] = array_filter( $data['timestamps'], fn ( $ts ) => $ts >= $cutoff );
-        $data['count']      = count( $data['timestamps'] );
+                if ( null !== $ip && '' !== $ip && ! in_array( $ip, $data['ips'], true ) ) {
+                    $data['ips'][] = $ip;
+                }
 
-        Cache::put( $cacheKey, $data, now()->addMinutes( $this->config['time_window_minutes'] ) );
+                // Drop timestamps that fall outside the configured window
+                // before recomputing the count.
+                $cutoff             = now()->subMinutes( $window )->timestamp;
+                $data['timestamps'] = array_values( array_filter(
+                    $data['timestamps'],
+                    fn ( $ts ) => $ts >= $cutoff,
+                ) );
+                $data['count']      = count( $data['timestamps'] );
 
-        return $data['count'];
+                Cache::put( $cacheKey, $data, now()->addMinutes( $window ) );
+
+                return $data['count'];
+            },
+        );
     }
 
     /**

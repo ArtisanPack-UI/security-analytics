@@ -86,6 +86,6 @@ abstract class AbstractAction implements ResponseActionInterface
     protected function getIpFromAnomaly( Anomaly $anomaly ): ?string
     {
         // First check the ip_address column, then fall back to metadata
-        return $anomaly->ip_address ?? ( $anomaly->metadata['ip'] ?? ( $anomaly->metadata['ip_address'] ?? null ));
+        return $anomaly->ip_address ?? ( $anomaly->metadata['ip'] ?? ( $anomaly->metadata['ip_address'] ?? null ) );
     }
 }

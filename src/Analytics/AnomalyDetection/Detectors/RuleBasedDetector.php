@@ -68,28 +68,60 @@ class RuleBasedDetector extends AbstractDetector
      */
     public function trackEvent( string $eventType, array $data ): void
     {
-        $ip            = $data['ip'] ?? null;
-        $userId        = $data['user_id'] ?? null;
-        $username      = $data['username'] ?? null;
-        $windowMinutes = 15;
+        $ip       = $data['ip'] ?? null;
+        $userId   = $data['user_id'] ?? null;
+        $username = $data['username'] ?? null;
 
-        // Track count per IP/user
+        // Use a generous TTL that covers the longest configured rule window
+        // — the consumers (checkCountThreshold, checkUniqueUsernamesThreshold)
+        // prune by their rule-specific time_window_minutes when reading.
+        $maxWindow = $this->maxRuleWindowMinutes();
+        $now       = now()->timestamp;
+
+        // Track count per IP/user. Store timestamps (not a raw counter) so
+        // readers can re-aggregate against any rule window. Key includes
+        // $eventType so it matches checkCountThreshold's read key.
         if ( $ip || $userId ) {
-            $countKey = 'rule_count_' . md5( ( $ip ?? '' ) . ( $userId ?? '' ) );
-            // Use Cache::add to initialize with TTL if key doesn't exist, then increment
-            Cache::add( $countKey, 0, now()->addMinutes( $windowMinutes ) );
-            Cache::increment( $countKey );
+            $countKey     = 'rule_count_' . md5( $eventType . ( $ip ?? '' ) . ( $userId ?? '' ) );
+            $timestamps   = Cache::get( $countKey, [] );
+            $cutoff       = now()->subMinutes( $maxWindow )->timestamp;
+            $timestamps   = array_values( array_filter( $timestamps, fn ( $ts ) => $ts >= $cutoff ) );
+            $timestamps[] = $now;
+            Cache::put( $countKey, $timestamps, now()->addMinutes( $maxWindow ) );
         }
 
-        // Track unique usernames per IP
+        // Track unique usernames per IP. Same approach: store {username, ts}
+        // tuples and prune on the read side.
         if ( $ip && $username ) {
             $uniqueKey = 'rule_unique_users_' . md5( $ip );
-            $usernames = Cache::get( $uniqueKey, [] );
-            if ( ! in_array( $username, $usernames, true ) ) {
-                $usernames[] = $username;
-                Cache::put( $uniqueKey, $usernames, now()->addMinutes( $windowMinutes ) );
+            $entries   = Cache::get( $uniqueKey, [] );
+            $cutoff    = now()->subMinutes( $maxWindow )->timestamp;
+            $entries   = array_values( array_filter(
+                $entries,
+                fn ( array $e ) => ( $e['ts'] ?? 0 ) >= $cutoff,
+            ) );
+            $entries[] = [ 'username' => $username, 'ts' => $now ];
+            Cache::put( $uniqueKey, $entries, now()->addMinutes( $maxWindow ) );
+        }
+    }
+
+    /**
+     * Highest `time_window_minutes` across all configured rules. Used as
+     * the cache TTL for tracking entries.
+     */
+    protected function maxRuleWindowMinutes(): int
+    {
+        $rules = $this->config['rules'] ?? $this->getDefaultRules();
+        $max   = 15;
+
+        foreach ( $rules as $rule ) {
+            $window = $rule['conditions']['time_window_minutes'] ?? null;
+            if ( is_int( $window ) && $window > $max ) {
+                $max = $window;
             }
         }
+
+        return $max;
     }
 
     /**
@@ -270,16 +302,35 @@ class RuleBasedDetector extends AbstractDetector
                 continue;
             }
 
-            // Generic skip for ancillary threshold/window fields that are only
-            // referenced by the aggregate checks above (e.g. `count` field in
-            // brute_force, `window_minutes` in credential_stuffing). Without
-            // this skip the standard equality comparison below would reject
-            // them as no matching $data field exists.
-            if ( str_contains( $field, '_threshold' ) || str_contains( $field, '_window' ) ) {
+            // Skip only the explicit ancillary fields that the aggregate
+            // checks consume (windows, distance/speed parameters). A blanket
+            // *_threshold substring check used to here let *_threshold rules
+            // like `records_threshold` and `requests_threshold` fall through
+            // unchecked, which made `mass_data_access` and `api_abuse`
+            // match on event_type alone and emit anomalies for every event.
+            $ancillary = [
+                'time_window_minutes',
+                'time_window_hours',
+                'max_speed_kmh',
+                'min_distance_km',
+            ];
+            if ( in_array( $field, $ancillary, true ) ) {
                 continue;
             }
 
             $actual = $data[ $field ] ?? null;
+
+            // Numeric *_threshold conditions (records_threshold,
+            // requests_threshold, etc.) are evaluated against the data
+            // field that drops the `_threshold` suffix.
+            if ( str_ends_with( $field, '_threshold' ) ) {
+                $dataField = substr( $field, 0, -strlen( '_threshold' ) );
+                $value     = $data[ $dataField ] ?? null;
+                if ( ! is_numeric( $value ) || (float) $value < (float) $expected ) {
+                    return false;
+                }
+                continue;
+            }
 
             // Standard comparison
             if ( is_array( $expected ) ) {
@@ -313,8 +364,13 @@ class RuleBasedDetector extends AbstractDetector
             return false;
         }
 
-        $cacheKey = 'rule_count_' . md5( $eventType . ( $ip ?? '' ) . ( $userId ?? '' ) );
-        $count    = (int) Cache::get( $cacheKey, 0 );
+        $cacheKey   = 'rule_count_' . md5( $eventType . ( $ip ?? '' ) . ( $userId ?? '' ) );
+        $timestamps = Cache::get( $cacheKey, [] );
+
+        // The writer stores a list of timestamps; re-bucket against this
+        // rule's specific window so longer/shorter windows count correctly.
+        $cutoff = now()->subMinutes( (int) $windowMinutes )->timestamp;
+        $count  = count( array_filter( $timestamps, fn ( $ts ) => $ts >= $cutoff ) );
 
         return $count >= $threshold;
     }
@@ -327,17 +383,27 @@ class RuleBasedDetector extends AbstractDetector
      */
     protected function checkUniqueUsernamesThreshold( array $conditions, array $data ): bool
     {
-        $threshold = $conditions['unique_usernames_threshold'] ?? 10;
-        $ip        = $data['ip'] ?? null;
+        $threshold     = $conditions['unique_usernames_threshold'] ?? 10;
+        $windowMinutes = $conditions['time_window_minutes'] ?? 15;
+        $ip            = $data['ip'] ?? null;
 
         if ( ! $ip ) {
             return false;
         }
 
-        $cacheKey  = 'rule_unique_users_' . md5( $ip );
-        $usernames = Cache::get( $cacheKey, [] );
+        $cacheKey = 'rule_unique_users_' . md5( $ip );
+        $entries  = Cache::get( $cacheKey, [] );
 
-        return count( $usernames ) >= $threshold;
+        // Prune to the rule window before counting unique users. Without
+        // this filter the cache blob grows unbounded and arbitrarily-old
+        // attempts get mixed into "last N minutes" counts.
+        $cutoff   = now()->subMinutes( (int) $windowMinutes )->timestamp;
+        $unique   = array_unique( array_map(
+            fn ( array $e ) => $e['username'] ?? null,
+            array_filter( $entries, fn ( array $e ) => ( $e['ts'] ?? 0 ) >= $cutoff ),
+        ) );
+
+        return count( $unique ) >= $threshold;
     }
 
     /**

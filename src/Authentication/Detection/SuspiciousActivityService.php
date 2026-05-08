@@ -14,6 +14,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use InvalidArgumentException;
 
 class SuspiciousActivityService implements SuspiciousActivityDetectorInterface
 {
@@ -23,7 +24,7 @@ class SuspiciousActivityService implements SuspiciousActivityDetectorInterface
     public function analyze( Request $request, ?Authenticatable $user = null, array $context = [] ): array
     {
         $detections = [];
-        $config     = config( 'security.suspicious_activity.detectors', [] );
+        $config     = config( 'artisanpack.security-analytics.suspicious_activity.detectors', [] );
 
         // Brute force detection
         if ( $config['brute_force']['enabled'] ?? true ) {
@@ -88,7 +89,7 @@ class SuspiciousActivityService implements SuspiciousActivityDetectorInterface
         // Skip very old comparisons (30+ days / 720 hours) to avoid false positives
         // when users legitimately relocate. This threshold is intentionally long
         // to still catch impossible travel over reasonable time periods.
-        $maxComparisonHours = config( 'security.suspicious_activity.detectors.impossible_travel.max_comparison_hours', 720 );
+        $maxComparisonHours = config( 'artisanpack.security-analytics.suspicious_activity.detectors.impossible_travel.max_comparison_hours', 720 );
         if ( $timeDiffHours > $maxComparisonHours ) {
             return false;
         }
@@ -110,7 +111,7 @@ class SuspiciousActivityService implements SuspiciousActivityDetectorInterface
         $requiredSpeedKmh = $timeDiffHours > 0 ? $distanceKm / $timeDiffHours : PHP_INT_MAX;
 
         // Get max allowed speed (default 1000 km/h - faster than commercial aircraft)
-        $maxSpeedKmh = config( 'security.suspicious_activity.detectors.impossible_travel.max_speed_kmh', 1000 );
+        $maxSpeedKmh = config( 'artisanpack.security-analytics.suspicious_activity.detectors.impossible_travel.max_speed_kmh', 1000 );
 
         return $requiredSpeedKmh > $maxSpeedKmh;
     }
@@ -143,7 +144,7 @@ class SuspiciousActivityService implements SuspiciousActivityDetectorInterface
      */
     public function getRecommendedAction( string $severity ): string
     {
-        $actions = config( 'security.suspicious_activity.response_actions', [
+        $actions = config( 'artisanpack.security-analytics.suspicious_activity.response_actions', [
             SuspiciousActivity::SEVERITY_LOW      => SuspiciousActivity::ACTION_NOTIFY,
             SuspiciousActivity::SEVERITY_MEDIUM   => SuspiciousActivity::ACTION_CAPTCHA,
             SuspiciousActivity::SEVERITY_HIGH     => SuspiciousActivity::ACTION_STEP_UP,
@@ -260,6 +261,15 @@ class SuspiciousActivityService implements SuspiciousActivityDetectorInterface
      */
     public function pruneOldRecords( int $retentionDays ): int
     {
+        if ( $retentionDays < 1 ) {
+            // Zero/negative retention would push the cutoff to now() or
+            // the future and delete *current* records — refuse loudly
+            // rather than silently mass-deleting active activity rows.
+            throw new InvalidArgumentException(
+                "Retention days must be a positive integer; got {$retentionDays}.",
+            );
+        }
+
         return SuspiciousActivity::where( 'created_at', '<', now()->subDays( $retentionDays ) )->delete();
     }
 
@@ -271,7 +281,7 @@ class SuspiciousActivityService implements SuspiciousActivityDetectorInterface
      */
     public function incrementLoginAttempts( string $ip ): void
     {
-        $windowMinutes = config( 'security.suspicious_activity.detectors.brute_force.window_minutes', 15 );
+        $windowMinutes = config( 'artisanpack.security-analytics.suspicious_activity.detectors.brute_force.window_minutes', 15 );
         $cacheKey      = "login_attempts_{$ip}";
         $ttlSeconds    = $windowMinutes * 60;
 
@@ -312,7 +322,7 @@ class SuspiciousActivityService implements SuspiciousActivityDetectorInterface
      */
     protected function detectBruteForce( Request $request ): ?array
     {
-        $config        = config( 'security.suspicious_activity.detectors.brute_force', [] );
+        $config        = config( 'artisanpack.security-analytics.suspicious_activity.detectors.brute_force', [] );
         $threshold     = $config['threshold'] ?? 5;
         $windowMinutes = $config['window_minutes'] ?? 15;
 
@@ -456,13 +466,18 @@ class SuspiciousActivityService implements SuspiciousActivityDetectorInterface
      */
     protected function getLocationFromIp( string $ip ): ?array
     {
-        // In production, use a GeoIP service
+        // Default placeholder — apps in production should override this
+        // method (or bind a custom subclass) to plug in MaxMind / IPinfo /
+        // Cloudflare GeoIP. We surface lat/long as nulls *and* a flag so
+        // detectImpossibleTravel() can decide to skip rather than evaluate
+        // against unusable data.
         return [
-            'ip'        => $ip,
-            'latitude'  => null,
-            'longitude' => null,
-            'country'   => null,
-            'city'      => null,
+            'ip'           => $ip,
+            'latitude'     => null,
+            'longitude'    => null,
+            'country'      => null,
+            'city'         => null,
+            'lookup_ready' => false,
         ];
     }
 
@@ -482,7 +497,7 @@ class SuspiciousActivityService implements SuspiciousActivityDetectorInterface
         $indicators = [];
 
         // Get trusted proxy IPs from config (load balancers, CDNs, etc.)
-        $trustedProxies = config( 'security.suspicious_activity.detectors.proxy_detection.trusted_proxies', [] );
+        $trustedProxies = config( 'artisanpack.security-analytics.suspicious_activity.detectors.proxy_detection.trusted_proxies', [] );
 
         // If request is from a trusted proxy, don't flag it
         if ( in_array( $ip, $trustedProxies, true ) ) {
@@ -553,7 +568,7 @@ class SuspiciousActivityService implements SuspiciousActivityDetectorInterface
     protected function detectTimeAnomaly( Authenticatable $user ): ?array
     {
         // Get configurable unusual hours
-        $config            = config( 'security.suspicious_activity.detectors.anomalous_login', [] );
+        $config            = config( 'artisanpack.security-analytics.suspicious_activity.detectors.anomalous_login', [] );
         $unusualHoursStart = $config['unusual_hours_start'] ?? 2;
         $unusualHoursEnd   = $config['unusual_hours_end'] ?? 5;
 

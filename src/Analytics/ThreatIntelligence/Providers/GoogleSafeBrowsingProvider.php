@@ -65,10 +65,20 @@ class GoogleSafeBrowsingProvider extends AbstractProvider
      */
     public function checkDomain( string $domain ): ?array
     {
-        // Convert domain to URL format for Safe Browsing
-        $url = "https://{$domain}/";
+        // Convert domain to URL format for Safe Browsing, then
+        // re-tag the result as a domain hit so downstream consumers
+        // don't see an indicator_type=url with a synthetic URL value.
+        $url    = "https://{$domain}/";
+        $result = $this->checkUrl( $url );
 
-        return $this->checkUrl( $url );
+        if ( null === $result ) {
+            return null;
+        }
+
+        $result['indicator']      = $domain;
+        $result['indicator_type'] = 'domain';
+
+        return $result;
     }
 
     /**

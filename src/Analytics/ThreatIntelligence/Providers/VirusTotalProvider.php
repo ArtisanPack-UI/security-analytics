@@ -183,6 +183,6 @@ class VirusTotalProvider extends AbstractProvider
             }
         }
 
-        return array_unique( $categories);
+        return array_unique( $categories );
     }
 }

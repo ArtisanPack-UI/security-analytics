@@ -238,7 +238,7 @@ class GenerateSecurityReportCommand extends Command
             }
 
             if ( ! empty( $rows ) ) {
-                $this->table( ['Metric', 'Value'], $rows);
+                $this->table( ['Metric', 'Value'], $rows );
             }
         }
     }

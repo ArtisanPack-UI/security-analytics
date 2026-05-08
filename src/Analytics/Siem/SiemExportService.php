@@ -149,11 +149,21 @@ class SiemExportService
         } );
 
         if ( $this->config['batch_enabled'] ) {
+            $flushResults = [];
             foreach ( $filteredEvents as $event ) {
-                $this->addToBuffer( $event );
+                $result = $this->addToBuffer( $event );
+                if ( is_array( $result ) && isset( $result['results'] ) ) {
+                    // The buffer overflowed and addToBuffer triggered a flush
+                    // — surface its result so callers can see export failures
+                    // instead of silently treating buffered+flushed as success.
+                    $flushResults[] = $result;
+                }
             }
 
-            return ['buffered' => count( $filteredEvents )];
+            return [
+                'buffered'      => count( $this->buffer ),
+                'flush_results' => $flushResults,
+            ];
         }
 
         return $this->sendBatchToExporters( $filteredEvents );
@@ -170,10 +180,17 @@ class SiemExportService
             return ['flushed' => 0];
         }
 
-        $events       = $this->buffer;
-        $this->buffer = [];
+        // Keep the buffer intact until we know the export succeeded. Clearing
+        // up-front would permanently lose queued events on a transient
+        // exporter failure.
+        $events = $this->buffer;
+        $result = $this->sendBatchToExporters( $events );
 
-        return $this->sendBatchToExporters( $events );
+        if ( $result['success'] ?? false ) {
+            $this->buffer = [];
+        }
+
+        return $result;
     }
 
     /**
@@ -377,7 +394,7 @@ class SiemExportService
     protected function sendBatchToExporters( array $events ): array
     {
         if ( empty( $events ) ) {
-            return ['exported' => 0];
+            return ['success' => true, 'exported' => 0];
         }
 
         $results = [];
@@ -386,8 +403,21 @@ class SiemExportService
             $results[ $name ] = $exporter->exportBatch( $events );
         }
 
+        // Only treat the batch as exported when every enabled exporter
+        // confirmed success. A partial failure would otherwise let
+        // flush() drop the buffer even though some exporters never
+        // received the events.
+        $allSuccessful = true;
+        foreach ( $results as $result ) {
+            if ( ! ( $result['success'] ?? false ) ) {
+                $allSuccessful = false;
+                break;
+            }
+        }
+
         return [
-            'exported' => count( $events),
+            'success'  => $allSuccessful,
+            'exported' => $allSuccessful ? count( $events ) : 0,
             'results'  => $results,
         ];
     }

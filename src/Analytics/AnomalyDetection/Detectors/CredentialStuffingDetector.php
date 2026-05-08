@@ -75,44 +75,37 @@ class CredentialStuffingDetector extends AbstractDetector
         $username = $data['username'] ?? $data['email'] ?? 'unknown';
         $success  = $data['success'] ?? false;
 
-        // Track by IP
-        $ipKey  = "credential_stuffing:ip:{$ip}";
-        $ipData = Cache::get( $ipKey, [
-            'users'      => [],
-            'attempts'   => 0,
-            'successes'  => 0,
-            'timestamps' => [],
-        ] );
+        $window  = (int) $this->config['time_window_minutes'];
+        $cutoff  = now()->subMinutes( $window )->timestamp;
+        $nowTs   = now()->timestamp;
 
-        if ( ! in_array( $username, $ipData['users'], true ) ) {
-            $ipData['users'][] = $username;
-        }
+        // Track by IP. Stored as per-attempt records (timestamp + username +
+        // success) so we can prune anything older than the window on every
+        // write — otherwise the blob grows monotonically and "last N
+        // minutes" becomes "all time since the cache was warm".
+        $ipKey      = "credential_stuffing:ip:{$ip}";
+        $ipAttempts = Cache::get( $ipKey, [] );
 
-        $ipData['attempts']++;
-        if ( $success ) {
-            $ipData['successes']++;
-        }
-        $ipData['timestamps'][] = now()->timestamp;
+        $ipAttempts = array_values( array_filter(
+            $ipAttempts,
+            fn ( array $a ) => ( $a['ts'] ?? 0 ) >= $cutoff,
+        ) );
+        $ipAttempts[] = [ 'ts' => $nowTs, 'username' => $username, 'success' => (bool) $success ];
 
-        Cache::put( $ipKey, $ipData, now()->addMinutes( $this->config['time_window_minutes'] ) );
+        Cache::put( $ipKey, $ipAttempts, now()->addMinutes( $window ) );
 
-        // Track global stats
-        $globalKey  = 'credential_stuffing:global';
-        $globalData = Cache::get( $globalKey, [
-            'attempts'   => 0,
-            'successes'  => 0,
-            'unique_ips' => [],
-        ] );
+        // Track global stats with the same approach: keep a list of
+        // {ts, ip, success} records, prune by cutoff on every write.
+        $globalKey      = 'credential_stuffing:global';
+        $globalAttempts = Cache::get( $globalKey, [] );
 
-        $globalData['attempts']++;
-        if ( $success ) {
-            $globalData['successes']++;
-        }
-        if ( ! in_array( $ip, $globalData['unique_ips'], true ) ) {
-            $globalData['unique_ips'][] = $ip;
-        }
+        $globalAttempts = array_values( array_filter(
+            $globalAttempts,
+            fn ( array $a ) => ( $a['ts'] ?? 0 ) >= $cutoff,
+        ) );
+        $globalAttempts[] = [ 'ts' => $nowTs, 'ip' => $ip, 'success' => (bool) $success ];
 
-        Cache::put( $globalKey, $globalData, now()->addMinutes( $this->config['time_window_minutes'] ) );
+        Cache::put( $globalKey, $globalAttempts, now()->addMinutes( $window ) );
     }
 
     /**
@@ -122,16 +115,28 @@ class CredentialStuffingDetector extends AbstractDetector
      */
     protected function checkCredentialStuffing( string $ip, array $data ): ?Anomaly
     {
-        $ipKey  = "credential_stuffing:ip:{$ip}";
-        $ipData = Cache::get( $ipKey );
+        $ipKey      = "credential_stuffing:ip:{$ip}";
+        $ipAttempts = Cache::get( $ipKey, [] );
 
-        if ( ! $ipData || $ipData['attempts'] < $this->config['min_attempts_for_analysis'] ) {
+        // Prune anything outside the active window before computing aggregates
+        // — match the bucketing applied on the write side in trackAttempt().
+        $cutoff     = now()->subMinutes( (int) $this->config['time_window_minutes'] )->timestamp;
+        $ipAttempts = array_values( array_filter(
+            $ipAttempts,
+            fn ( array $a ) => ( $a['ts'] ?? 0 ) >= $cutoff,
+        ) );
+
+        if ( count( $ipAttempts ) < $this->config['min_attempts_for_analysis'] ) {
             return null;
         }
 
-        $uniqueUsers = count( $ipData['users'] );
-        $attempts    = $ipData['attempts'];
-        $successes   = $ipData['successes'];
+        $attempts    = count( $ipAttempts );
+        $successes   = count( array_filter( $ipAttempts, fn ( array $a ) => $a['success'] ?? false ) );
+        $uniqueUsers = count( array_unique( array_map(
+            fn ( array $a ) => $a['username'] ?? null,
+            $ipAttempts,
+        ) ) );
+        $timestamps  = array_map( fn ( array $a ) => $a['ts'] ?? 0, $ipAttempts );
         $successRate = $attempts > 0 ? $successes / $attempts : 0;
 
         // Pattern 1: Many different users from single IP
@@ -141,7 +146,7 @@ class CredentialStuffingDetector extends AbstractDetector
         $isLowSuccessRate = $successRate <= $this->config['success_rate_threshold'];
 
         // Pattern 3: High velocity
-        $velocity       = $this->calculateVelocity( $ipData['timestamps'] );
+        $velocity       = $this->calculateVelocity( $timestamps );
         $isHighVelocity = $velocity > 2; // More than 2 attempts per minute
 
         if ( $isMultiUser && ( $isLowSuccessRate || $isHighVelocity ) ) {
@@ -184,16 +189,28 @@ class CredentialStuffingDetector extends AbstractDetector
      */
     protected function checkGlobalSuccessRate(): ?Anomaly
     {
-        $globalKey  = 'credential_stuffing:global';
-        $globalData = Cache::get( $globalKey );
+        $globalKey      = 'credential_stuffing:global';
+        $globalAttempts = Cache::get( $globalKey, [] );
 
-        if ( ! $globalData || $globalData['attempts'] < $this->config['min_attempts_for_analysis'] * 5 ) {
+        $cutoff         = now()->subMinutes( (int) $this->config['time_window_minutes'] )->timestamp;
+        $globalAttempts = array_values( array_filter(
+            $globalAttempts,
+            fn ( array $a ) => ( $a['ts'] ?? 0 ) >= $cutoff,
+        ) );
+
+        $totalAttempts = count( $globalAttempts );
+
+        if ( $totalAttempts < $this->config['min_attempts_for_analysis'] * 5 ) {
             return null;
         }
 
-        $successRate = $globalData['attempts'] > 0
-            ? $globalData['successes'] / $globalData['attempts']
-            : 0;
+        $successes  = count( array_filter( $globalAttempts, fn ( array $a ) => $a['success'] ?? false ) );
+        $uniqueIps  = count( array_unique( array_map(
+            fn ( array $a ) => $a['ip'] ?? null,
+            $globalAttempts,
+        ) ) );
+
+        $successRate = $totalAttempts > 0 ? $successes / $totalAttempts : 0;
 
         $baselineSuccessRate = 0.7; // Typical expected success rate
 
@@ -215,8 +232,8 @@ class CredentialStuffingDetector extends AbstractDetector
                         'attack_type'           => 'global_credential_stuffing',
                         'current_success_rate'  => round( $successRate * 100, 2 ) . '%',
                         'expected_success_rate' => round( $baselineSuccessRate * 100, 2 ) . '%',
-                        'total_attempts'        => $globalData['attempts'],
-                        'unique_source_ips'     => count( $globalData['unique_ips'] ),
+                        'total_attempts'        => $totalAttempts,
+                        'unique_source_ips'     => $uniqueIps,
                     ],
                 );
             }

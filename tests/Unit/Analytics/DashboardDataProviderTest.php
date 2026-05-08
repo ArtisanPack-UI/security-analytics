@@ -240,6 +240,6 @@ class DashboardDataProviderTest extends AnalyticsTestCase
         $overview24h = $this->provider->getOverview( 24 );
 
         $this->assertEquals( 1, $overview6h['anomalies_detected'] );
-        $this->assertEquals( 2, $overview24h['anomalies_detected']);
+        $this->assertEquals( 2, $overview24h['anomalies_detected'] );
     }
 }

@@ -45,7 +45,7 @@ class SyncThreatFeedsCommand extends Command
         $feeds = $this->option( 'feed' );
 
         if ( empty( $feeds ) ) {
-            $feeds = config( 'security-analytics.threat_intelligence.custom_feeds', [] );
+            $feeds = config( 'artisanpack.security-analytics.threat_intelligence.custom_feeds', [] );
         }
 
         $totalImported = 0;

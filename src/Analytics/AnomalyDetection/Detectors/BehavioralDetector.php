@@ -34,8 +34,10 @@ class BehavioralDetector extends AbstractDetector
             $anomalies = $anomalies->merge( $this->analyzeUser( (int) $data['user_id'], $data ) );
         }
 
-        // Analyze users with recent activity for deviations
-        if ( ! isset( $data['skip_batch_analysis'] ) ) {
+        // Analyze users with recent activity for deviations.
+        // Honor the flag by value, not just key presence — passing
+        // ['skip_batch_analysis' => false] should NOT skip the batch.
+        if ( ! ( $data['skip_batch_analysis'] ?? false ) ) {
             $anomalies = $anomalies->merge( $this->analyzeBatchBehavior() );
         }
 
@@ -466,17 +468,22 @@ class BehavioralDetector extends AbstractDetector
      */
     protected function normalizeUserAgent( string $userAgent ): string
     {
-        // Extract browser and OS family for comparison
+        // Extract browser and OS family for comparison.
+        // Order matters: match Edge before Chrome (modern Edge UA contains
+        // both `Edg/` and `Chrome/`), and match Safari only when there's
+        // a Version/X.Y.Z token alongside it (Chrome/Edge UAs include
+        // `Safari/...` too — without the Version qualifier they'd
+        // collapse into the same signature and mask new-browser anomalies).
         $patterns = [
-            '/Chrome\/[\d.]+/'  => 'Chrome',
-            '/Firefox\/[\d.]+/' => 'Firefox',
-            '/Safari\/[\d.]+/'  => 'Safari',
-            '/Edge\/[\d.]+/'    => 'Edge',
-            '/Windows NT/'      => 'Windows',
-            '/Mac OS X/'        => 'MacOS',
-            '/Linux/'           => 'Linux',
-            '/iPhone|iPad/'     => 'iOS',
-            '/Android/'         => 'Android',
+            '/(?:Edg|Edge)\/[\d.]+/'            => 'Edge',
+            '/Chrome\/[\d.]+/'                  => 'Chrome',
+            '/Firefox\/[\d.]+/'                 => 'Firefox',
+            '/Version\/[\d.]+.*Safari\/[\d.]+/' => 'Safari',
+            '/Windows NT/'                      => 'Windows',
+            '/Mac OS X/'                        => 'MacOS',
+            '/Linux/'                           => 'Linux',
+            '/iPhone|iPad/'                     => 'iOS',
+            '/Android/'                         => 'Android',
         ];
 
         $normalized = [];
@@ -486,6 +493,8 @@ class BehavioralDetector extends AbstractDetector
             }
         }
 
-        return implode( '|', $normalized);
+        // Fall back to a hash so unknown UAs keep a stable identity rather
+        // than collapsing onto the empty signature.
+        return [] !== $normalized ? implode( '|', $normalized ) : sha1( $userAgent );
     }
 }

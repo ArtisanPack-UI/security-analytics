@@ -297,7 +297,7 @@ class SecurityAnalyticsServiceProvider extends ServiceProvider
         }
 
         if ( ! empty( $configs['webhook'] ) ) {
-            $service->registerExporter( new SiemWebhookExporter( $configs['webhook']));
+            $service->registerExporter( new SiemWebhookExporter( $configs['webhook'] ) );
         }
     }
 }
