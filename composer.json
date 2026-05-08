@@ -17,7 +17,8 @@
   ],
   "autoload": {
     "psr-4": {
-      "ArtisanPackUI\\SecurityAnalytics\\": "src/"
+      "ArtisanPackUI\\SecurityAnalytics\\": "src/",
+      "ArtisanPackUI\\SecurityAnalytics\\Database\\Factories\\": "database/factories/"
     },
     "files": [
       "src/helpers.php"
@@ -45,6 +46,7 @@
     "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
     "friendsofphp/php-cs-fixer": "^3.75",
     "laravel/pint": "^1.26",
+    "livewire/livewire": "^3.6|^4.0",
     "orchestra/testbench": "^10.2",
     "pestphp/pest": "^3.8",
     "pestphp/pest-plugin-laravel": "^3.2"
