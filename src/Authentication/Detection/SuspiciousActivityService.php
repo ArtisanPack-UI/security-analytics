@@ -563,7 +563,7 @@ class SuspiciousActivityService implements SuspiciousActivityDetectorInterface
      *
      * Uses the user's timezone when available (from user profile or session),
      * falls back to application timezone or UTC. Unusual hours are configurable
-     * via config('security.suspicious_activity.detectors.anomalous_login').
+     * via config('artisanpack.security-analytics.suspicious_activity.detectors.anomalous_login').
      *
      * @return array{type: string, severity: string, details: array}|null
      */

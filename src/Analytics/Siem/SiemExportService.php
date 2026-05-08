@@ -412,21 +412,31 @@ class SiemExportService
             $results[ $name ] = $exporter->exportBatch( $events );
         }
 
-        // Only treat the batch as exported when every enabled exporter
-        // confirmed success. A partial failure would otherwise let
-        // flush() drop the buffer even though some exporters never
-        // received the events.
-        $allSuccessful = true;
+        // Sum the per-exporter acknowledged counts so the reported
+        // `exported` reflects what actually shipped. Falling back to a
+        // full-batch count when an exporter reports success without an
+        // explicit count, and to 0 when it failed.
+        //
+        // The overall `success` flag is still all-or-nothing — flush()
+        // uses it to decide whether to clear the buffer, so partial
+        // failures keep the buffer intact for retry. (Side effect:
+        // healthy exporters can see duplicates on a retried batch;
+        // per-exporter delivery cursors are the correct long-term fix
+        // and tracked separately.)
+        $allSuccessful  = true;
+        $exportedTotal  = 0;
+        $batchSize      = count( $events );
         foreach ( $results as $result ) {
-            if ( ! ( $result['success'] ?? false ) ) {
+            $resultSuccess = $result['success'] ?? false;
+            if ( ! $resultSuccess ) {
                 $allSuccessful = false;
-                break;
             }
+            $exportedTotal += (int) ( $result['exported'] ?? ( $resultSuccess ? $batchSize : 0 ) );
         }
 
         return [
             'success'  => $allSuccessful,
-            'exported' => $allSuccessful ? count( $events ) : 0,
+            'exported' => $exportedTotal,
             'results'  => $results,
         ];
     }

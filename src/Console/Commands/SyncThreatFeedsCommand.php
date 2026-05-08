@@ -147,10 +147,18 @@ class SyncThreatFeedsCommand extends Command
     {
         $indicators = [];
 
-        // Handle STIX format
-        if ( isset( $data['objects'] ) ) {
+        // Handle STIX format. Validate the outer `objects` value is an
+        // array, and each object is a shaped array with a string `type`,
+        // before delegating — malformed feeds with scalar entries used
+        // to throw on $object['type'].
+        if ( isset( $data['objects'] ) && is_array( $data['objects'] ) ) {
             foreach ( $data['objects'] as $object ) {
-                if ( 'indicator' === $object['type'] ) {
+                if (
+                    is_array( $object )
+                    && isset( $object['type'] )
+                    && is_string( $object['type'] )
+                    && 'indicator' === $object['type']
+                ) {
                     $indicators[] = $this->parseStixIndicator( $object );
                 }
             }
@@ -158,13 +166,13 @@ class SyncThreatFeedsCommand extends Command
             return array_filter( $indicators );
         }
 
-        // Handle simple JSON array
-        if ( isset( $data['indicators'] ) ) {
+        // Handle envelope JSON: {"indicators": [...]}.
+        if ( isset( $data['indicators'] ) && is_array( $data['indicators'] ) ) {
             return $data['indicators'];
         }
 
-        // Handle flat array of indicators
-        if ( is_array( $data ) && isset( $data[0] ) ) {
+        // Handle flat array of indicators (numerically-indexed top level).
+        if ( isset( $data[0] ) ) {
             return $data;
         }
 
