@@ -591,7 +591,16 @@ class SuspiciousActivityService implements SuspiciousActivityDetectorInterface
             return null;
         }
 
-        if ( $currentHour >= $unusualHoursStart && $currentHour < $unusualHoursEnd ) {
+        // Same-day window (e.g. 1:00 → 5:00): fall inside the half-open
+        // [start, end) interval. Overnight wrap-around windows (e.g.
+        // 22:00 → 6:00) split into "from start to midnight" OR "from
+        // midnight to end" — without this branch, ranges where
+        // start >= end would never match.
+        $isUnusual = $unusualHoursStart < $unusualHoursEnd
+            ? ( $currentHour >= $unusualHoursStart && $currentHour < $unusualHoursEnd )
+            : ( $currentHour >= $unusualHoursStart || $currentHour < $unusualHoursEnd );
+
+        if ( $isUnusual ) {
             return [
                 'type'     => SuspiciousActivity::TYPE_UNUSUAL_TIME,
                 'severity' => SuspiciousActivity::SEVERITY_LOW,
