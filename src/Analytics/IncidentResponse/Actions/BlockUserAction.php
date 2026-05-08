@@ -133,9 +133,9 @@ class BlockUserAction extends AbstractAction
             $hasColumn = DB::getSchemaBuilder()->hasColumn( $tableName, 'is_blocked' );
 
             if ( $hasColumn ) {
-                DB::table( $tableName )->where( 'id', $userId )->update( ['is_blocked' => $blocked]);
+                DB::table( $tableName )->where( 'id', $userId )->update( ['is_blocked' => $blocked] );
             }
-        } catch ( Exception $e) {
+        } catch ( Exception $e ) {
             // Column doesn't exist, rely on cache-based blocking
         }
     }

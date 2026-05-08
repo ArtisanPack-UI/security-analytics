@@ -120,7 +120,7 @@ class ExportSecurityEvents extends Command
         $value = (string) $value;
 
         if ( str_contains( $value, ',' ) || str_contains( $value, '"' ) || str_contains( $value, "\n" ) ) {
-            return '"' . str_replace( '"', '""', $value) . '"';
+            return '"' . str_replace( '"', '""', $value ) . '"';
         }
 
         return $value;

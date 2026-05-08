@@ -301,7 +301,7 @@ class SuspiciousActivity extends Model
             if ( ! $model->created_at ) {
                 $model->created_at = now();
             }
-            if ( null === $model->details) {
+            if ( null === $model->details ) {
                 $model->details = [];
             }
         });

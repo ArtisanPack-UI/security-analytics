@@ -211,9 +211,9 @@ class StatisticalDetector extends AbstractDetector
     /**
      * Get the category for a metric key.
      */
-    protected function getCategoryForMetric( string $metricKey): string
+    protected function getCategoryForMetric( string $metricKey ): string
     {
-        return match ( $metricKey) {
+        return match ( $metricKey ) {
             'failed_logins', 'account_lockouts' => Anomaly::CATEGORY_AUTHENTICATION,
             'access_denied'                     => Anomaly::CATEGORY_ACCESS,
             'suspicious_activity'               => Anomaly::CATEGORY_THREAT,

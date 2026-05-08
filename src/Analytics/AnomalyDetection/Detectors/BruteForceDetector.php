@@ -258,7 +258,7 @@ class BruteForceDetector extends AbstractDetector
     {
         $cacheKey = "brute_force:ip_targets:{$ip}";
 
-        return Cache::get( $cacheKey, []);
+        return Cache::get( $cacheKey, [] );
     }
 
     /**
@@ -266,9 +266,9 @@ class BruteForceDetector extends AbstractDetector
      *
      * @return array<int, string>
      */
-    protected function getSourceIps( string $cacheKey): array
+    protected function getSourceIps( string $cacheKey ): array
     {
-        $data = Cache::get( $cacheKey, ['ips' => []]);
+        $data = Cache::get( $cacheKey, ['ips' => []] );
 
         return $data['ips'];
     }

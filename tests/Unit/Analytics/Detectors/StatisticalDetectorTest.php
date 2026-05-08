@@ -152,9 +152,9 @@ class StatisticalDetectorTest extends AnalyticsTestCase
             ] );
         }
 
-        $anomalies = $this->detector->detect( []);
+        $anomalies = $this->detector->detect( [] );
 
         // Should not detect anomalies from old data
-        $this->assertCount( 0, $anomalies);
+        $this->assertCount( 0, $anomalies );
     }
 }

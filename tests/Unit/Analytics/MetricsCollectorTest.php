@@ -161,8 +161,8 @@ class MetricsCollectorTest extends AnalyticsTestCase
 
         $deleted = $this->collector->cleanup( 90 );
 
-        $this->assertEquals( 1, $deleted);
-        $this->assertDatabaseMissing( 'security_metrics', ['metric_name' => 'old.metric']);
-        $this->assertDatabaseHas( 'security_metrics', ['metric_name' => 'new.metric']);
+        $this->assertEquals( 1, $deleted );
+        $this->assertDatabaseMissing( 'security_metrics', ['metric_name' => 'old.metric'] );
+        $this->assertDatabaseHas( 'security_metrics', ['metric_name' => 'new.metric'] );
     }
 }

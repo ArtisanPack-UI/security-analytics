@@ -100,6 +100,6 @@ class BlockIpAction extends AbstractAction
      */
     public static function unblock( string $ip ): bool
     {
-        return Cache::forget( "blocked_ip:{$ip}");
+        return Cache::forget( "blocked_ip:{$ip}" );
     }
 }

@@ -255,7 +255,7 @@ class TestSiemConnectionCommand extends Command
                 ];
             }
 
-            $this->table( ['Exporter', 'Total Exported', 'Errors', 'Last Export'], $rows);
+            $this->table( ['Exporter', 'Total Exported', 'Errors', 'Last Export'], $rows );
         }
     }
 }

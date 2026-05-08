@@ -241,16 +241,9 @@ class DashboardDataProvider
     {
         $startTime = now()->subHours( $hours );
 
-        $format = match ( $interval ) {
-            'minute' => '%Y-%m-%d %H:%i',
-            'hour'   => '%Y-%m-%d %H:00',
-            'day'    => '%Y-%m-%d',
-            default  => '%Y-%m-%d %H:00',
-        };
-
         return SecurityMetric::where( 'metric_name', $metric )
             ->where( 'recorded_at', '>=', $startTime )
-            ->selectRaw( "DATE_FORMAT(recorded_at, '{$format}') as period" )
+            ->select( \ArtisanPackUI\SecurityAnalytics\Analytics\Support\TimeBucket::periodExpression( 'recorded_at', $interval ) )
             ->selectRaw( 'SUM(value) as total' )
             ->selectRaw( 'AVG(value) as average' )
             ->selectRaw( 'COUNT(*) as count' )
@@ -342,15 +335,15 @@ class DashboardDataProvider
      *
      * @param  Collection<int, SecurityIncident>  $incidents
      */
-    protected function calculateAvgTimeToResolve( Collection $incidents): ?float
+    protected function calculateAvgTimeToResolve( Collection $incidents ): ?float
     {
-        $resolvedIncidents = $incidents->whereNotNull( 'resolved_at');
+        $resolvedIncidents = $incidents->whereNotNull( 'resolved_at' );
 
-        if ( $resolvedIncidents->isEmpty()) {
+        if ( $resolvedIncidents->isEmpty() ) {
             return null;
         }
 
-        $totalMinutes = $resolvedIncidents->sum( fn ( $i) => $i->getTimeToResolve() ?? 0);
+        $totalMinutes = $resolvedIncidents->sum( fn ( $i ) => $i->getTimeToResolve() ?? 0 );
 
         return round( $totalMinutes / $resolvedIncidents->count(), 1);
     }

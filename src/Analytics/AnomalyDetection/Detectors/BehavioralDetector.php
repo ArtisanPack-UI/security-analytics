@@ -480,8 +480,8 @@ class BehavioralDetector extends AbstractDetector
         ];
 
         $normalized = [];
-        foreach ( $patterns as $pattern => $name) {
-            if ( preg_match( $pattern, $userAgent)) {
+        foreach ( $patterns as $pattern => $name ) {
+            if ( preg_match( $pattern, $userAgent ) ) {
                 $normalized[] = $name;
             }
         }

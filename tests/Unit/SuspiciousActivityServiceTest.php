@@ -65,7 +65,7 @@ class SuspiciousActivityServiceTest extends TestCase
 
         $this->assertIsArray( $analysis );
         $this->assertArrayHasKey( 'suspicious', $analysis );
-        $this->assertArrayHasKey( 'risk_score', $analysis);
-        $this->assertArrayHasKey( 'detections', $analysis);
+        $this->assertArrayHasKey( 'risk_score', $analysis );
+        $this->assertArrayHasKey( 'detections', $analysis );
     }
 }

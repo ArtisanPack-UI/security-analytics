@@ -217,9 +217,9 @@ class AnomalyDetectionServiceTest extends AnalyticsTestCase
             'detected_at' => now(),
         ] );
 
-        $resolved = $this->service->autoResolveOld( 72); // 3 days
+        $resolved = $this->service->autoResolveOld( 72 ); // 3 days
 
-        $this->assertEquals( 1, $resolved);
-        $this->assertEquals( 1, Anomaly::unresolved()->count());
+        $this->assertEquals( 1, $resolved );
+        $this->assertEquals( 1, Anomaly::unresolved()->count() );
     }
 }

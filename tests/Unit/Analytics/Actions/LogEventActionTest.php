@@ -128,8 +128,8 @@ class LogEventActionTest extends AnalyticsTestCase
         $anomaly  = Anomaly::factory()->create();
         $incident = SecurityIncident::factory()->create();
 
-        $result = $this->action->execute( $anomaly, $incident);
+        $result = $this->action->execute( $anomaly, $incident );
 
-        $this->assertTrue( $result['success']);
+        $this->assertTrue( $result['success'] );
     }
 }

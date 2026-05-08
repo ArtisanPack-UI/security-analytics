@@ -12,7 +12,9 @@ use Illuminate\Queue\SerializesModels;
 
 class SecurityEventOccurred implements ShouldBroadcast
 {
-    use Dispatchable;use InteractsWithSockets;use SerializesModels;
+    use Dispatchable;
+use InteractsWithSockets;
+use SerializesModels;
 
     public const TYPE_AUTHENTICATION = 'authentication';
 

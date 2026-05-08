@@ -174,7 +174,7 @@ class ThreatReport extends AbstractReport
     /**
      * {@inheritdoc}
      */
-    protected function getCsvRows( array $data): array
+    protected function getCsvRows( array $data ): array
     {
         return $data['anomalies'];
     }

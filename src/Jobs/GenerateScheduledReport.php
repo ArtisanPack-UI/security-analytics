@@ -20,7 +20,10 @@ use Throwable;
 
 class GenerateScheduledReport implements ShouldQueue
 {
-    use Dispatchable;use InteractsWithQueue;use Queueable;use SerializesModels;
+    use Dispatchable;
+use InteractsWithQueue;
+use Queueable;
+use SerializesModels;
 
     /**
      * The number of times the job may be attempted.
@@ -257,9 +260,9 @@ class GenerateScheduledReport implements ShouldQueue
     /**
      * Calculate next run time based on cron expression.
      */
-    protected function calculateNextRun( ScheduledReport $scheduledReport): Carbon
+    protected function calculateNextRun( ScheduledReport $scheduledReport ): Carbon
     {
-        $cron = new \Cron\CronExpression( $scheduledReport->cron_expression);
+        $cron = new \Cron\CronExpression( $scheduledReport->cron_expression );
 
         return Carbon::instance( $cron->getNextRunDate());
     }

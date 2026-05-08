@@ -95,7 +95,7 @@ class IncidentReport extends AbstractReport
         }
 
         throw new InvalidArgumentException(
-            "Invalid type for '{$fieldName}': expected DateTime, Carbon, or date string, got " . gettype( $value),
+            "Invalid type for '{$fieldName}': expected DateTime, Carbon, or date string, got " . gettype( $value ),
         );
     }
 }

@@ -278,9 +278,9 @@ class WebhookExporter implements SiemExporterInterface
     /**
      * Escape value for CEF/LEEF format.
      */
-    protected function escapeValue( mixed $value): string
+    protected function escapeValue( mixed $value ): string
     {
-        if ( ! is_string( $value)) {
+        if ( ! is_string( $value ) ) {
             $value = (string) $value;
         }
 

@@ -262,12 +262,12 @@ class CredentialStuffingDetector extends AbstractDetector
             return 0.0;
         }
 
-        $timeSpan = max( $timestamps) - min( $timestamps);
+        $timeSpan = max( $timestamps ) - min( $timestamps );
 
-        if ( $timeSpan <= 0) {
-            return count( $timestamps);
+        if ( $timeSpan <= 0 ) {
+            return count( $timestamps );
         }
 
-        return count( $timestamps) / ( $timeSpan / 60);
+        return count( $timestamps ) / ( $timeSpan / 60);
     }
 }

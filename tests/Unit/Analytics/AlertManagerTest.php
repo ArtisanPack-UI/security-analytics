@@ -179,8 +179,8 @@ class AlertManagerTest extends AnalyticsTestCase
 
     public function test_it_returns_false_for_nonexistent_alert(): void
     {
-        $result = $this->manager->acknowledge( 9999);
+        $result = $this->manager->acknowledge( 9999 );
 
-        $this->assertFalse( $result);
+        $this->assertFalse( $result );
     }
 }

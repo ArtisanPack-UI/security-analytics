@@ -59,7 +59,7 @@ class ClearSecurityEvents extends Command
 
         $deleted = $logger->pruneOldEvents( $days, $keepCritical );
 
-        $this->info( "Deleted {$deleted} security event(s).");
+        $this->info( "Deleted {$deleted} security event(s)." );
 
         return self::SUCCESS;
     }

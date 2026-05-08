@@ -15,7 +15,10 @@ use Throwable;
 
 class ProcessSecurityMetrics implements ShouldQueue
 {
-    use Dispatchable;use InteractsWithQueue;use Queueable;use SerializesModels;
+    use Dispatchable;
+use InteractsWithQueue;
+use Queueable;
+use SerializesModels;
 
     /**
      * The number of times the job may be attempted.
@@ -77,6 +80,6 @@ class ProcessSecurityMetrics implements ShouldQueue
         Log::error( 'Failed to process security metrics', [
             'exception'     => $exception->getMessage(),
             'metrics_count' => count( $this->metrics ),
-        ]);
+        ] );
     }
 }

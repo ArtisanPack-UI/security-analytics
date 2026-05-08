@@ -352,15 +352,15 @@ class SyncThreatFeedsCommand extends Command
             $this->info( 'By Type:' );
             $this->table(
                 ['Type', 'Count'],
-                collect( $stats['by_type'] )->map( fn ( $count, $type) => [$type, $count])->toArray(),
+                collect( $stats['by_type'] )->map( fn ( $count, $type ) => [$type, $count] )->toArray(),
             );
         }
 
-        if ( ! empty( $stats['by_threat_type'])) {
-            $this->info( 'By Threat Type:');
+        if ( ! empty( $stats['by_threat_type'] ) ) {
+            $this->info( 'By Threat Type:' );
             $this->table(
                 ['Threat Type', 'Count'],
-                collect( $stats['by_threat_type'])->map( fn ( $count, $type) => [$type, $count])->toArray(),
+                collect( $stats['by_threat_type'] )->map( fn ( $count, $type ) => [$type, $count] )->toArray(),
             );
         }
     }

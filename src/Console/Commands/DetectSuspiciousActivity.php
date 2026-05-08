@@ -122,8 +122,8 @@ class DetectSuspiciousActivity extends Command
             : (array) $recipients;
 
         Notification::route( 'mail', $recipientsArray )
-            ->notify( new SuspiciousActivityNotification( $suspicious));
+            ->notify( new SuspiciousActivityNotification( $suspicious ) );
 
-        $this->info( 'Notifications sent to: ' . implode( ', ', $recipientsArray));
+        $this->info( 'Notifications sent to: ' . implode( ', ', $recipientsArray ) );
     }
 }

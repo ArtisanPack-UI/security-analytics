@@ -108,7 +108,7 @@ class RevokeSessionsAction extends AbstractAction
             Log::debug( 'Failed to invalidate remember token', [
                 'user_id' => $userId,
                 'error'   => $e->getMessage(),
-            ]);
+            ] );
         }
     }
 }

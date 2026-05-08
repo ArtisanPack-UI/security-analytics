@@ -94,6 +94,6 @@ class SuspiciousActivityList extends Component
     {
         return view( 'security::livewire.suspicious-activity-list', [
             'activities' => $this->activities,
-        ]);
+        ] );
     }
 }

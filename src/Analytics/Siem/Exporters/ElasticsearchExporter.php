@@ -190,7 +190,7 @@ class ElasticsearchExporter implements SiemExporterInterface
                 'status'  => $response->status(),
                 'error'   => $response->body(),
             ];
-        } catch ( Exception $e) {
+        } catch ( Exception $e ) {
             return [
                 'success' => false,
                 'error'   => $e->getMessage(),

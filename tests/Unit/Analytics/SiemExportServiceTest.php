@@ -304,14 +304,14 @@ class SiemExportServiceTest extends AnalyticsTestCase
                 return $this->enabled;
             }
 
-            public function export( array $event): array
+            public function export( array $event ): array
             {
                 return $this->exportResult ?: ['success' => true];
             }
 
-            public function exportBatch( array $events): array
+            public function exportBatch( array $events ): array
             {
-                return $this->exportResult ?: ['success' => true, 'exported' => count( $events)];
+                return $this->exportResult ?: ['success' => true, 'exported' => count( $events )];
             }
 
             public function getConfig(): array

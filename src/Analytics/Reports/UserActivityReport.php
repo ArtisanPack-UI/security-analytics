@@ -15,14 +15,30 @@ class UserActivityReport extends AbstractReport
         $endDate   = $this->options['end_date'];
         $userId    = $this->options['user_id'] ?? null;
 
-        $authMetrics = SecurityMetric::category( SecurityMetric::CATEGORY_AUTHENTICATION )
+        // Build a single query that filters at the database level — pulling
+        // every authentication metric and post-filtering with Collection::where
+        // doesn't scale, and `Collection::whereIn` doesn't even exist (the
+        // method is on the query builder).
+        $authQuery = SecurityMetric::category( SecurityMetric::CATEGORY_AUTHENTICATION )
             ->whereBetween( 'recorded_at', [$startDate, $endDate] );
 
         if ( $userId ) {
-            $authMetrics->whereJsonContains( 'tags->user_id', $userId );
+            $authQuery->whereJsonContains( 'tags->user_id', $userId );
         }
 
-        $authMetrics = $authMetrics->get();
+        $authMetrics = $authQuery->get();
+
+        $loginSuccessQuery = ( clone $authQuery )
+            ->where( 'metric_name', 'auth.login' )
+            ->where( function ( $q ): void {
+                $q->whereJsonContains( 'tags->success', true )
+                    ->orWhereJsonContains( 'tags->success', 'true' )
+                    ->orWhereJsonContains( 'tags->success', 1 );
+            } );
+
+        $totalLogins     = (int) $loginSuccessQuery->sum( 'value' );
+        $failedLogins    = (int) ( clone $authQuery )->where( 'metric_name', 'auth.failed' )->sum( 'value' );
+        $passwordResets  = (int) ( clone $authQuery )->where( 'metric_name', 'auth.password_reset' )->sum( 'value' );
 
         $anomalies = Anomaly::whereBetween( 'detected_at', [$startDate, $endDate] );
         if ( $userId ) {
@@ -32,9 +48,9 @@ class UserActivityReport extends AbstractReport
 
         return [
             'summary' => [
-                'total_logins'    => $authMetrics->where( 'metric_name', 'auth.login' )->whereIn( 'tags.success', [true, 'true', 1] )->sum( 'value' ),
-                'failed_logins'   => $authMetrics->where( 'metric_name', 'auth.failed' )->sum( 'value' ),
-                'password_resets' => $authMetrics->where( 'metric_name', 'auth.password_reset' )->sum( 'value' ),
+                'total_logins'    => $totalLogins,
+                'failed_logins'   => $failedLogins,
+                'password_resets' => $passwordResets,
                 'anomalies'       => $anomalies->count(),
             ],
             'activity_by_hour' => $authMetrics->groupBy( fn ( $m ) => $m->recorded_at->format( 'H' ) )
@@ -65,7 +81,7 @@ class UserActivityReport extends AbstractReport
         return $html;
     }
 
-    protected function getCsvRows( array $data): array
+    protected function getCsvRows( array $data ): array
     {
         return $data['anomalies'];
     }

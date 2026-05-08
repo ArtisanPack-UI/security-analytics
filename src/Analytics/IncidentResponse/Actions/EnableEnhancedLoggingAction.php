@@ -185,7 +185,7 @@ class EnableEnhancedLoggingAction extends AbstractAction
             'anomaly_id'  => $anomalyId,
             'incident_id' => $incidentId,
             'enabled_at'  => now()->toIso8601String(),
-            'expires_at'  => now()->addHours( $duration)->toIso8601String(),
+            'expires_at'  => now()->addHours( $duration )->toIso8601String(),
         ], now()->addHours( $duration));
     }
 }

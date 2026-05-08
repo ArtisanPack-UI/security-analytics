@@ -25,7 +25,7 @@ return new class extends Migration
             $table->string('session_id', 255)->nullable();
             $table->string('type', 50);
             $table->enum('severity', ['low', 'medium', 'high', 'critical'])->default('medium');
-            $table->decimal('risk_score', 3, 2)->default(0);
+            $table->decimal('risk_score', 5, 2)->default(0);
             $table->string('ip_address', 45);
             $table->json('location')->nullable();
             $table->string('device_fingerprint', 64)->nullable();

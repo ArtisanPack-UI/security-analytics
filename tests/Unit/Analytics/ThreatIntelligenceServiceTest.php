@@ -260,7 +260,7 @@ class ThreatIntelligenceServiceTest extends AnalyticsTestCase
                 return $this->checkResult;
             }
 
-            public function checkHash( string $hash): ?array
+            public function checkHash( string $hash ): ?array
             {
                 return $this->checkResult;
             }

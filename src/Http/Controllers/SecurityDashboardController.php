@@ -251,16 +251,8 @@ class SecurityDashboardController extends Controller
             $query->where( 'category', $category );
         }
 
-        $format = match ( $interval ) {
-            'minute' => '%Y-%m-%d %H:%i',
-            'hour'   => '%Y-%m-%d %H:00',
-            'day'    => '%Y-%m-%d',
-            'week'   => '%Y-%W',
-            default  => '%Y-%m-%d %H:00',
-        };
-
         $data = $query
-            ->selectRaw( "DATE_FORMAT(recorded_at, '{$format}') as period" )
+            ->select( \ArtisanPackUI\SecurityAnalytics\Analytics\Support\TimeBucket::periodExpression( 'recorded_at', $interval ) )
             ->selectRaw( 'COUNT(*) as count' )
             ->selectRaw( 'SUM(value) as total_value' )
             ->groupBy( 'period' )
@@ -398,12 +390,12 @@ class SecurityDashboardController extends Controller
      */
     protected function getActiveSessionCount(): int
     {
-        if ( 'database' !== config( 'session.driver')) {
+        if ( 'database' !== config( 'session.driver' ) ) {
             return 0; // Cannot count sessions for non-database drivers
         }
 
-        return DB::table( config( 'session.table', 'sessions'))
-            ->where( 'last_activity', '>=', now()->subMinutes( 30)->timestamp)
+        return DB::table( config( 'session.table', 'sessions' ) )
+            ->where( 'last_activity', '>=', now()->subMinutes( 30 )->timestamp )
             ->count();
     }
 
@@ -412,12 +404,12 @@ class SecurityDashboardController extends Controller
      *
      * @return array<int, array<string, mixed>>
      */
-    protected function getTopThreatSources( int $limit): array
+    protected function getTopThreatSources( int $limit ): array
     {
-        return Anomaly::whereNotNull( 'ip_address')
-            ->selectRaw( 'ip_address, COUNT(*) as count')
-            ->groupBy( 'ip_address')
-            ->orderByDesc( 'count')
+        return Anomaly::whereNotNull( 'ip_address' )
+            ->selectRaw( 'ip_address, COUNT(*) as count' )
+            ->groupBy( 'ip_address' )
+            ->orderByDesc( 'count' )
             ->limit( $limit)
             ->get()
             ->toArray();

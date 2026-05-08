@@ -162,8 +162,8 @@ class BruteForceDetectorTest extends AnalyticsTestCase
 
     public function test_it_handles_empty_data_gracefully(): void
     {
-        $anomalies = $this->detector->detect( []);
+        $anomalies = $this->detector->detect( [] );
 
-        $this->assertCount( 0, $anomalies);
+        $this->assertCount( 0, $anomalies );
     }
 }

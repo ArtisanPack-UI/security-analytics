@@ -149,9 +149,9 @@ class LockAccountAction extends AbstractAction
                 DB::table( $table )->where( 'id', $userId )->update( [
                     'locked_at'   => $locked ? now() : null,
                     'lock_reason' => $locked ? $reason : null,
-                ]);
+                ] );
             }
-        } catch ( Exception $e) {
+        } catch ( Exception $e ) {
             // Column doesn't exist or other DB error - rely on cache
         }
     }

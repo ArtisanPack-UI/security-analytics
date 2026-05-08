@@ -357,8 +357,8 @@ class SecurityEventLogger implements SecurityEventLoggerInterface
 
         $message = "Security Event [{$type}]: {$name}";
 
-        if ( $channel) {
-            Log::channel( $channel)->{$logMethod}( $message, $data);
+        if ( $channel ) {
+            Log::channel( $channel )->{$logMethod}( $message, $data );
         } else {
             Log::{$logMethod}( $message, $data);
         }

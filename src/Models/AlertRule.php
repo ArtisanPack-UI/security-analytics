@@ -234,8 +234,8 @@ class AlertRule extends Model
             'not_in'      => is_array( $expected ) && ! in_array( $value, $expected, true ),
             'contains'    => is_string( $value ) && is_string( $expected ) && str_contains( $value, $expected ),
             'starts_with' => is_string( $value ) && is_string( $expected ) && str_starts_with( $value, $expected ),
-            'ends_with'   => is_string( $value ) && is_string( $expected ) && str_ends_with( $value, $expected),
-            'regex'       => is_string( $value) && is_string( $expected) && preg_match( $expected, $value),
+            'ends_with'   => is_string( $value ) && is_string( $expected ) && str_ends_with( $value, $expected ),
+            'regex'       => is_string( $value ) && is_string( $expected ) && preg_match( $expected, $value ),
             default       => false,
         };
     }

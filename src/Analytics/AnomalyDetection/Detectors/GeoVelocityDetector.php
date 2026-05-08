@@ -197,6 +197,6 @@ class GeoVelocityDetector extends AbstractDetector
             'timestamp' => is_string( $timestamp ) ? $timestamp : $timestamp->toIso8601String(),
             'country'   => $data['country'] ?? null,
             'city'      => $data['city'] ?? null,
-        ], now()->addMinutes( $this->config['lookback_minutes']));
+        ], now()->addMinutes( $this->config['lookback_minutes'] ) );
     }
 }

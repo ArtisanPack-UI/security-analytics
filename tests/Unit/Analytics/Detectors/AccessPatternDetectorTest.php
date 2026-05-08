@@ -178,9 +178,9 @@ class AccessPatternDetectorTest extends AnalyticsTestCase
             'user_id'          => $userId,
             'records_accessed' => 300,
             'ip'               => '10.0.0.1',
-        ]);
+        ] );
 
         // May or may not trigger depending on cooldown logic
-        $this->assertInstanceOf( \Illuminate\Support\Collection::class, $anomalies);
+        $this->assertInstanceOf( \Illuminate\Support\Collection::class, $anomalies );
     }
 }

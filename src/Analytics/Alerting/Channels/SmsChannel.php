@@ -293,7 +293,7 @@ class SmsChannel implements AlertChannelInterface
                 'message_id' => $result->get( 'MessageId' ),
                 'recipient'  => $phoneNumber,
             ];
-        } catch ( Exception $e) {
+        } catch ( Exception $e ) {
             return [
                 'success' => false,
                 'error'   => $e->getMessage(),

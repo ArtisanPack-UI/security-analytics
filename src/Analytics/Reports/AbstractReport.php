@@ -205,7 +205,7 @@ HTML;
         $html = '<div class="stat-cards">';
 
         foreach ( $stats as $label => $value ) {
-            $displayLabel = ucwords( str_replace( '_', ' ', $label));
+            $displayLabel = ucwords( str_replace( '_', ' ', $label ) );
             $html .= <<<CARD
             <div class="stat-card">
                 <div class="stat-value">{$value}</div>

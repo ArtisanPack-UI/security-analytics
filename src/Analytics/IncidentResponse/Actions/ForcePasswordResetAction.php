@@ -147,10 +147,10 @@ class ForcePasswordResetAction extends AbstractAction
                 return false;
             }
 
-            Password::sendResetLink( ['email' => $user->email]);
+            Password::sendResetLink( ['email' => $user->email] );
 
             return true;
-        } catch ( Exception $e) {
+        } catch ( Exception $e ) {
             return false;
         }
     }

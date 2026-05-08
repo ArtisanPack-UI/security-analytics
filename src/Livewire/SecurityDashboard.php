@@ -116,7 +116,7 @@ class SecurityDashboard extends Component
                         'data'            => array_values( $bySeverity ),
                         'backgroundColor' => array_map(
                             fn ( $severity ) => $colors[ $severity ] ?? 'rgba(156, 163, 175, 0.5)',
-                            array_keys( $bySeverity),
+                            array_keys( $bySeverity ),
                         ),
                     ],
                 ],

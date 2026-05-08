@@ -170,9 +170,9 @@ class IncidentResponderTest extends AnalyticsTestCase
 
     public function test_it_returns_error_for_expired_approval(): void
     {
-        $result = $this->responder->approve( 'nonexistent_approval_id');
+        $result = $this->responder->approve( 'nonexistent_approval_id' );
 
-        $this->assertFalse( $result['success']);
-        $this->assertStringContainsString( 'not found', $result['message']);
+        $this->assertFalse( $result['success'] );
+        $this->assertStringContainsString( 'not found', $result['message'] );
     }
 }

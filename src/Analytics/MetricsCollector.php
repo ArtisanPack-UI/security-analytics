@@ -345,19 +345,10 @@ class MetricsCollector
         DateTimeInterface $endDate,
         string $interval = 'hour',
     ): array {
-        $format = match ( $interval ) {
-            'minute' => '%Y-%m-%d %H:%i',
-            'hour'   => '%Y-%m-%d %H:00',
-            'day'    => '%Y-%m-%d',
-            'week'   => '%Y-%W',
-            'month'  => '%Y-%m',
-            default  => '%Y-%m-%d %H:00',
-        };
-
         return SecurityMetric::query()
             ->where( 'metric_name', $metricName )
             ->whereBetween( 'recorded_at', [$startDate, $endDate] )
-            ->selectRaw( "DATE_FORMAT(recorded_at, '{$format}') as period" )
+            ->select( Support\TimeBucket::periodExpression( 'recorded_at', $interval ) )
             ->selectRaw( 'SUM(value) as total' )
             ->selectRaw( 'AVG(value) as average' )
             ->selectRaw( 'COUNT(*) as count' )
@@ -382,9 +373,9 @@ class MetricsCollector
      *
      * @param  array<string, mixed>  $tags
      */
-    protected function getCacheKey( string $name, string $category, array $tags): string
+    protected function getCacheKey( string $name, string $category, array $tags ): string
     {
-        $tagHash = empty( $tags) ? '' : '_' . md5( serialize( $tags));
+        $tagHash = empty( $tags ) ? '' : '_' . md5( serialize( $tags ) );
 
         return "security_metric:{$category}:{$name}{$tagHash}";
     }

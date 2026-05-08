@@ -206,8 +206,8 @@ class GeoVelocityDetectorTest extends AnalyticsTestCase
             'user_id'   => $userId,
             'latitude'  => 35.6762,  // Tokyo
             'longitude' => 139.6503,
-        ]);
+        ] );
 
-        $this->assertInstanceOf( \Illuminate\Support\Collection::class, $anomalies);
+        $this->assertInstanceOf( \Illuminate\Support\Collection::class, $anomalies );
     }
 }

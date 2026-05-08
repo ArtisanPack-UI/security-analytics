@@ -288,15 +288,15 @@ class SecurityAnalyticsServiceProvider extends ServiceProvider
     /**
      * Register SIEM exporters gated on config presence.
      */
-    protected function registerSiemExporters( SiemExportService $service): void
+    protected function registerSiemExporters( SiemExportService $service ): void
     {
-        $configs = config( 'artisanpack.security-analytics.siem.providers', []);
+        $configs = config( 'artisanpack.security-analytics.siem.providers', [] );
 
-        if ( ! empty( $configs['datadog'])) {
-            $service->registerExporter( new DatadogExporter( $configs['datadog']));
+        if ( ! empty( $configs['datadog'] ) ) {
+            $service->registerExporter( new DatadogExporter( $configs['datadog'] ) );
         }
 
-        if ( ! empty( $configs['webhook'])) {
+        if ( ! empty( $configs['webhook'] ) ) {
             $service->registerExporter( new SiemWebhookExporter( $configs['webhook']));
         }
     }

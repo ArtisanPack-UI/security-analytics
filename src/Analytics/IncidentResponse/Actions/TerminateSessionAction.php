@@ -146,11 +146,11 @@ class TerminateSessionAction extends AbstractAction
     {
         try {
             $deleted = DB::table( 'sessions' )
-                ->where( 'ip_address', $ip)
+                ->where( 'ip_address', $ip )
                 ->delete();
 
             return $deleted;
-        } catch ( Exception $e) {
+        } catch ( Exception $e ) {
             return 0;
         }
     }

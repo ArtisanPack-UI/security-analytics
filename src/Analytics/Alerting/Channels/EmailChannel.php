@@ -151,6 +151,6 @@ class EmailChannel implements AlertChannelInterface
         $lines[] = 'This is an automated security alert from your application.';
         $lines[] = 'Please investigate this alert promptly.';
 
-        return implode( "\n", $lines);
+        return implode( "\n", $lines );
     }
 }

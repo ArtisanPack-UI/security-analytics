@@ -55,6 +55,6 @@ class ComplianceReport extends AbstractReport
 
     protected function getCsvRows( array $data ): array
     {
-        return collect( $data['controls'] )->map( fn ( $c, $name ) => array_merge( ['control' => $name], $c))->values()->toArray();
+        return collect( $data['controls'] )->map( fn ( $c, $name ) => array_merge( ['control' => $name], $c ) )->values()->toArray();
     }
 }

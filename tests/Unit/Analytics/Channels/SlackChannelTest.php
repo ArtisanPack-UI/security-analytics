@@ -142,8 +142,8 @@ class SlackChannelTest extends AnalyticsTestCase
 
         $this->assertArrayHasKey( 'enabled', $config );
         $this->assertArrayHasKey( 'webhook_url', $config );
-        $this->assertArrayHasKey( 'channel', $config);
-        $this->assertArrayHasKey( 'username', $config);
-        $this->assertArrayHasKey( 'icon_emoji', $config);
+        $this->assertArrayHasKey( 'channel', $config );
+        $this->assertArrayHasKey( 'username', $config );
+        $this->assertArrayHasKey( 'icon_emoji', $config );
     }
 }

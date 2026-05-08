@@ -177,7 +177,7 @@ class VirusTotalProvider extends AbstractProvider
         // From categories field (domains/IPs)
         if ( isset( $attributes['categories'] ) ) {
             foreach ( $attributes['categories'] as $engine => $category ) {
-                if ( ! in_array( $category, $categories, true)) {
+                if ( ! in_array( $category, $categories, true ) ) {
                     $categories[] = $category;
                 }
             }

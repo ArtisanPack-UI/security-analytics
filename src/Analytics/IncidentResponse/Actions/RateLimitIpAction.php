@@ -134,8 +134,8 @@ class RateLimitIpAction extends AbstractAction
      */
     public static function removeRateLimit( string $ip ): bool
     {
-        Cache::forget( "enhanced_rate_limit:{$ip}");
-        RateLimiter::clear( "security_rate_limit:{$ip}");
+        Cache::forget( "enhanced_rate_limit:{$ip}" );
+        RateLimiter::clear( "security_rate_limit:{$ip}" );
 
         return true;
     }

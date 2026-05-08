@@ -355,13 +355,13 @@ class AlertManager
             'message'       => $anomaly->description,
             'sent_at'       => AlertHistory::STATUS_SENT === $status ? now() : null,
             'error_message' => $result['error'] ?? null,
-        ]);
+        ] );
     }
 
     /**
      * Get context key for cooldown.
      */
-    protected function getContextKey( Anomaly $anomaly): string
+    protected function getContextKey( Anomaly $anomaly ): string
     {
         return "{$anomaly->category}:{$anomaly->user_id}:{$anomaly->detector}";
     }

@@ -225,15 +225,15 @@ class AnomalyModelTest extends AnalyticsTestCase
         $this->assertEquals( 'authentication', Anomaly::CATEGORY_AUTHENTICATION );
         $this->assertEquals( 'threat', Anomaly::CATEGORY_THREAT );
         $this->assertEquals( 'access', Anomaly::CATEGORY_ACCESS );
-        $this->assertEquals( 'data', Anomaly::CATEGORY_DATA);
+        $this->assertEquals( 'data', Anomaly::CATEGORY_DATA );
     }
 
     public function test_it_has_severity_constants(): void
     {
-        $this->assertEquals( 'info', Anomaly::SEVERITY_INFO);
-        $this->assertEquals( 'low', Anomaly::SEVERITY_LOW);
-        $this->assertEquals( 'medium', Anomaly::SEVERITY_MEDIUM);
-        $this->assertEquals( 'high', Anomaly::SEVERITY_HIGH);
-        $this->assertEquals( 'critical', Anomaly::SEVERITY_CRITICAL);
+        $this->assertEquals( 'info', Anomaly::SEVERITY_INFO );
+        $this->assertEquals( 'low', Anomaly::SEVERITY_LOW );
+        $this->assertEquals( 'medium', Anomaly::SEVERITY_MEDIUM );
+        $this->assertEquals( 'high', Anomaly::SEVERITY_HIGH );
+        $this->assertEquals( 'critical', Anomaly::SEVERITY_CRITICAL );
     }
 }

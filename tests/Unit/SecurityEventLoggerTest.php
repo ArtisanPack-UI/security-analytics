@@ -235,13 +235,13 @@ class SecurityEventLoggerTest extends TestCase
             'driver'   => 'sqlite',
             'database' => ':memory:',
             'prefix'   => '',
-        ]);
+        ] );
 
         // Create users table for migrations that depend on it
-        $app['db']->connection()->getSchemaBuilder()->create( 'users', function ( $table): void {
-            $table->increments( 'id');
-            $table->string( 'name');
-            $table->string( 'email');
+        $app['db']->connection()->getSchemaBuilder()->create( 'users', function ( $table ): void {
+            $table->increments( 'id' );
+            $table->string( 'name' );
+            $table->string( 'email' );
             $table->timestamps();
         });
     }

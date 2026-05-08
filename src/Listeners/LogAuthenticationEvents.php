@@ -207,7 +207,7 @@ class LogAuthenticationEvents
         if ( strlen( $name ) <= 2 ) {
             $maskedName = str_repeat( '*', strlen( $name ) );
         } else {
-            $maskedName = substr( $name, 0, 1) . str_repeat( '*', strlen( $name) - 2) . substr( $name, -1);
+            $maskedName = substr( $name, 0, 1 ) . str_repeat( '*', strlen( $name ) - 2 ) . substr( $name, -1 );
         }
 
         return $maskedName . '@' . $domain;

@@ -390,7 +390,7 @@ class SecurityIncident extends Model
             if ( empty( $incident->incident_number ) ) {
                 $incident->incident_number = self::generateIncidentNumber();
             }
-            if ( null === $incident->opened_at) {
+            if ( null === $incident->opened_at ) {
                 $incident->opened_at = now();
             }
         });

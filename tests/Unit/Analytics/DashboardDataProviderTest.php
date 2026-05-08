@@ -231,15 +231,15 @@ class DashboardDataProviderTest extends AnalyticsTestCase
     public function test_it_respects_hours_parameter(): void
     {
         // Create anomaly within 6 hours
-        Anomaly::factory()->create( ['detected_at' => now()->subHours( 3)]);
+        Anomaly::factory()->create( ['detected_at' => now()->subHours( 3 )] );
 
         // Create anomaly outside 6 hours but within 24 hours
-        Anomaly::factory()->create( ['detected_at' => now()->subHours( 12)]);
+        Anomaly::factory()->create( ['detected_at' => now()->subHours( 12 )] );
 
-        $overview6h  = $this->provider->getOverview( 6);
-        $overview24h = $this->provider->getOverview( 24);
+        $overview6h  = $this->provider->getOverview( 6 );
+        $overview24h = $this->provider->getOverview( 24 );
 
-        $this->assertEquals( 1, $overview6h['anomalies_detected']);
+        $this->assertEquals( 1, $overview6h['anomalies_detected'] );
         $this->assertEquals( 2, $overview24h['anomalies_detected']);
     }
 }

@@ -246,14 +246,9 @@ class RuleBasedDetector extends AbstractDetector
         $conditions = $rule['conditions'] ?? [];
 
         foreach ( $conditions as $field => $expected ) {
-            // Skip threshold conditions - they're checked separately
-            if ( str_contains( $field, '_threshold' ) || str_contains( $field, '_window' ) ) {
-                continue;
-            }
-
-            $actual = $data[ $field ] ?? null;
-
-            // Handle special condition types
+            // Handle special condition types FIRST — these are aggregate
+            // checks against the conditions+data tuple rather than per-field
+            // equality, so they have to run before the generic skip below.
             if ( 'count_threshold' === $field ) {
                 if ( ! $this->checkCountThreshold( $conditions, $data ) ) {
                     return false;
@@ -274,6 +269,17 @@ class RuleBasedDetector extends AbstractDetector
                 }
                 continue;
             }
+
+            // Generic skip for ancillary threshold/window fields that are only
+            // referenced by the aggregate checks above (e.g. `count` field in
+            // brute_force, `window_minutes` in credential_stuffing). Without
+            // this skip the standard equality comparison below would reject
+            // them as no matching $data field exists.
+            if ( str_contains( $field, '_threshold' ) || str_contains( $field, '_window' ) ) {
+                continue;
+            }
+
+            $actual = $data[ $field ] ?? null;
 
             // Standard comparison
             if ( is_array( $expected ) ) {
@@ -408,9 +414,9 @@ class RuleBasedDetector extends AbstractDetector
     {
         $sensitiveFields = ['password', 'token', 'secret', 'key', 'credential'];
 
-        return array_filter( $data, function ( $key ) use ( $sensitiveFields) {
-            foreach ( $sensitiveFields as $field) {
-                if ( str_contains( strtolower( $key), $field)) {
+        return array_filter( $data, function ( $key ) use ( $sensitiveFields ) {
+            foreach ( $sensitiveFields as $field ) {
+                if ( str_contains( strtolower( $key ), $field ) ) {
                     return false;
                 }
             }

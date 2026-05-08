@@ -439,10 +439,10 @@ class AccessPatternDetector extends AbstractDetector
                 // Escape all regex metacharacters except *, then convert * to .*
                 $escaped = preg_quote( $pattern, '/' );
                 $regex   = '/^' . str_replace( '\\*', '.*', $escaped ) . '$/';
-                if ( preg_match( $regex, $endpoint)) {
+                if ( preg_match( $regex, $endpoint ) ) {
                     return true;
                 }
-            } elseif ( $endpoint === $pattern) {
+            } elseif ( $endpoint === $pattern ) {
                 return true;
             }
         }
@@ -453,10 +453,10 @@ class AccessPatternDetector extends AbstractDetector
     /**
      * Extract resource type from resource identifier.
      */
-    protected function extractResourceType( string $resource): string
+    protected function extractResourceType( string $resource ): string
     {
         // Extract type from patterns like "users/123" or "posts:456"
-        if ( preg_match( '/^([a-z_]+)[\/:]/', $resource, $matches)) {
+        if ( preg_match( '/^([a-z_]+)[\/:]/', $resource, $matches ) ) {
             return $matches[1];
         }
 

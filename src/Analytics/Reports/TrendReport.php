@@ -91,12 +91,12 @@ class TrendReport extends AbstractReport
         $html .= $this->renderTable( $data['anomaly_trends'] );
 
         $html .= '<h2>Daily Incident Trends</h2>';
-        $html .= $this->renderTable( $data['incident_trends']);
+        $html .= $this->renderTable( $data['incident_trends'] );
 
         return $html;
     }
 
-    protected function getCsvRows( array $data): array
+    protected function getCsvRows( array $data ): array
     {
         return $data['anomaly_trends'];
     }

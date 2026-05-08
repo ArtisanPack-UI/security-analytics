@@ -224,7 +224,7 @@ class ExecutiveSummaryReport extends AbstractReport
         }
 
         // Threat rows
-        foreach ( $data['threat_overview']['by_severity'] as $severity => $count) {
+        foreach ( $data['threat_overview']['by_severity'] as $severity => $count ) {
             $rows[] = [
                 'category' => 'Threats by Severity',
                 'metric'   => $severity,

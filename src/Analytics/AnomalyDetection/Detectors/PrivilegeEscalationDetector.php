@@ -358,7 +358,7 @@ class PrivilegeEscalationDetector extends AbstractDetector
         $data['timestamps'] = array_filter( $data['timestamps'], fn ( $ts ) => $ts >= $cutoff );
         $data['count']      = count( $data['timestamps'] );
 
-        Cache::put( $cacheKey, $data, now()->addMinutes( $this->config['time_window_minutes']));
+        Cache::put( $cacheKey, $data, now()->addMinutes( $this->config['time_window_minutes'] ) );
 
         return $data['count'];
     }
@@ -368,9 +368,9 @@ class PrivilegeEscalationDetector extends AbstractDetector
      *
      * @return array<int, string>
      */
-    protected function getAttemptedPermissions( string $cacheKey): array
+    protected function getAttemptedPermissions( string $cacheKey ): array
     {
-        $data = Cache::get( $cacheKey, ['permissions' => []]);
+        $data = Cache::get( $cacheKey, ['permissions' => []] );
 
         return array_unique( $data['permissions']);
     }

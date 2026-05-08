@@ -382,8 +382,8 @@ class SiemExportService
 
         $results = [];
 
-        foreach ( $this->getEnabledExporters() as $name => $exporter) {
-            $results[ $name ] = $exporter->exportBatch( $events);
+        foreach ( $this->getEnabledExporters() as $name => $exporter ) {
+            $results[ $name ] = $exporter->exportBatch( $events );
         }
 
         return [

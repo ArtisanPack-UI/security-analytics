@@ -126,9 +126,9 @@ class RequireTwoFactorAction extends AbstractAction
             $hasColumn = DB::getSchemaBuilder()->hasColumn( $tableName, 'requires_2fa' );
 
             if ( $hasColumn ) {
-                DB::table( $tableName )->where( 'id', $userId )->update( ['requires_2fa' => $required]);
+                DB::table( $tableName )->where( 'id', $userId )->update( ['requires_2fa' => $required] );
             }
-        } catch ( Exception $e) {
+        } catch ( Exception $e ) {
             // Column doesn't exist, rely on cache
         }
     }

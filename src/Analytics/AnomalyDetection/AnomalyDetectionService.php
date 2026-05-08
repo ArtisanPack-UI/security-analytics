@@ -261,15 +261,8 @@ class AnomalyDetectionService
     {
         $startDate = now()->subDays( $days );
 
-        $format = match ( $interval ) {
-            'hour'  => '%Y-%m-%d %H:00',
-            'day'   => '%Y-%m-%d',
-            'week'  => '%Y-%W',
-            default => '%Y-%m-%d',
-        };
-
         return Anomaly::where( 'detected_at', '>=', $startDate )
-            ->selectRaw( "DATE_FORMAT(detected_at, '{$format}') as period" )
+            ->select( \ArtisanPackUI\SecurityAnalytics\Analytics\Support\TimeBucket::periodExpression( 'detected_at', $interval ) )
             ->selectRaw( 'COUNT(*) as count' )
             ->selectRaw( 'AVG(score) as avg_score' )
             ->selectRaw( "SUM(CASE WHEN severity = 'critical' THEN 1 ELSE 0 END) as critical_count" )
@@ -369,7 +362,7 @@ class AnomalyDetectionService
         }
 
         if ( $detectorConfig['rule_based']['enabled'] ?? true ) {
-            $this->registerDetector( new RuleBasedDetector( $detectorConfig['rule_based'] ?? []));
+            $this->registerDetector( new RuleBasedDetector( $detectorConfig['rule_based'] ?? [] ) );
         }
     }
 
@@ -378,10 +371,10 @@ class AnomalyDetectionService
      *
      * @param  Collection<int, Anomaly>  $anomalies
      */
-    protected function dispatchAnomalyEvents( Collection $anomalies): void
+    protected function dispatchAnomalyEvents( Collection $anomalies ): void
     {
-        foreach ( $anomalies as $anomaly) {
-            if ( class_exists( AnomalyDetected::class)) {
+        foreach ( $anomalies as $anomaly ) {
+            if ( class_exists( AnomalyDetected::class ) ) {
                 event( new AnomalyDetected( $anomaly));
             }
         }

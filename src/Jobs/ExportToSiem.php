@@ -17,7 +17,10 @@ use Throwable;
 
 class ExportToSiem implements ShouldQueue
 {
-    use Dispatchable;use InteractsWithQueue;use Queueable;use SerializesModels;
+    use Dispatchable;
+use InteractsWithQueue;
+use Queueable;
+use SerializesModels;
 
     /**
      * The number of times the job may be attempted.
@@ -145,6 +148,6 @@ class ExportToSiem implements ShouldQueue
      */
     public static function flush(): self
     {
-        return new self( flushBuffer: true);
+        return new self( flushBuffer: true );
     }
 }

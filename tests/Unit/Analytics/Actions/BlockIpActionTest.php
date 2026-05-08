@@ -153,11 +153,11 @@ class BlockIpActionTest extends AnalyticsTestCase
 
         $incident = SecurityIncident::factory()->create( [
             'affected_ips' => [],
-        ]);
+        ] );
 
-        $this->action->execute( $anomaly, $incident);
+        $this->action->execute( $anomaly, $incident );
 
         $incident->refresh();
-        $this->assertContains( $ip, $incident->affected_ips ?? []);
+        $this->assertContains( $ip, $incident->affected_ips ?? [] );
     }
 }

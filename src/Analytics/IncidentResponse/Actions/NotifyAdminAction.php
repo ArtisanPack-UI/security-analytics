@@ -234,9 +234,9 @@ class NotifyAdminAction extends AbstractAction
     /**
      * Get emoji for severity level.
      */
-    protected function getSeverityEmoji( string $severity): string
+    protected function getSeverityEmoji( string $severity ): string
     {
-        return match ( $severity) {
+        return match ( $severity ) {
             'critical' => '🚨',
             'high'     => '⚠️',
             'medium'   => '⚡',

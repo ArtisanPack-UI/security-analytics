@@ -278,7 +278,7 @@ class IpQualityScoreProvider extends AbstractProvider
         if ( $response['bot_status'] ?? false ) {
             $categories[] = 'Bot';
         }
-        if ( $response['recent_abuse'] ?? false) {
+        if ( $response['recent_abuse'] ?? false ) {
             $categories[] = 'Recent Abuse';
         }
 

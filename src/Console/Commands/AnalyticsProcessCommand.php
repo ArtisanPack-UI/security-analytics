@@ -143,6 +143,6 @@ class AnalyticsProcessCommand extends Command
         $incidentResult   = $this->siemExport->exportRecentIncidents( 1 );
         $incidentExported = $incidentResult['exported'] ?? 0;
 
-        $this->info( "Exported {$incidentExported} recent incidents.");
+        $this->info( "Exported {$incidentExported} recent incidents." );
     }
 }

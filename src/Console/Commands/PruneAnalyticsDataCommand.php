@@ -52,7 +52,16 @@ class PruneAnalyticsDataCommand extends Command
     {
         $runAll       = $this->option( 'all' );
         $dryRun       = $this->option( 'dry-run' );
-        $overrideDays = $this->option( 'days' ) ? (int) $this->option( 'days' ) : null;
+        $daysOption   = $this->option( 'days' );
+        $overrideDays = null !== $daysOption ? (int) $daysOption : null;
+
+        // A non-positive --days value would push the cutoff to now() or the
+        // future, which would prune *current* records instead of stale ones.
+        if ( null !== $overrideDays && $overrideDays < 1 ) {
+            $this->error( "--days must be a positive integer; got '{$daysOption}'." );
+
+            return Command::FAILURE;
+        }
 
         // Fail fast: check if any prune option is specified
         if ( ! $runAll && ! $this->option( 'metrics' ) && ! $this->option( 'anomalies' )
@@ -226,11 +235,11 @@ class PruneAnalyticsDataCommand extends Command
 
         $count = $query->count();
 
-        if ( ! $dryRun && $count > 0) {
+        if ( ! $dryRun && $count > 0 ) {
             $query->delete();
         }
 
-        $this->info( "  {$count} profiles " . ( $dryRun ? 'would be deleted' : 'deleted'));
+        $this->info( "  {$count} profiles " . ( $dryRun ? 'would be deleted' : 'deleted' ) );
 
         return $count;
     }

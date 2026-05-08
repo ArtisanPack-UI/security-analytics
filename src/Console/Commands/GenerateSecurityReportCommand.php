@@ -233,11 +233,11 @@ class GenerateSecurityReportCommand extends Command
             $rows = [];
             foreach ( $data['summary'] as $key => $value ) {
                 if ( is_scalar( $value ) ) {
-                    $rows[] = [ucwords( str_replace( '_', ' ', $key)), $value];
+                    $rows[] = [ucwords( str_replace( '_', ' ', $key ) ), $value];
                 }
             }
 
-            if ( ! empty( $rows)) {
+            if ( ! empty( $rows ) ) {
                 $this->table( ['Metric', 'Value'], $rows);
             }
         }

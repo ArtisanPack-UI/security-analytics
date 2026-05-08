@@ -459,9 +459,9 @@ class ThreatIntelligenceService
     /**
      * Map confidence score to severity level.
      */
-    protected function mapConfidenceToSeverity( int $confidence): string
+    protected function mapConfidenceToSeverity( int $confidence ): string
     {
-        return match ( true) {
+        return match ( true ) {
             $confidence >= 80 => ThreatIndicator::SEVERITY_CRITICAL,
             $confidence >= 60 => ThreatIndicator::SEVERITY_HIGH,
             $confidence >= 40 => ThreatIndicator::SEVERITY_MEDIUM,

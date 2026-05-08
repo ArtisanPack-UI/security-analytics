@@ -159,7 +159,7 @@ class SuspiciousLoginAttempt extends Notification implements ShouldQueue
         }
 
         if ( SuspiciousActivity::TYPE_BRUTE_FORCE === $this->activity->type ) {
-            if ( isset( $activityDetails['attempt_count'])) {
+            if ( isset( $activityDetails['attempt_count'] ) ) {
                 $details[] = "Failed attempts: {$activityDetails['attempt_count']}";
             }
         }

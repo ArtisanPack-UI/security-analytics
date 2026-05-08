@@ -150,12 +150,16 @@ class SplunkExporter implements SiemExporterInterface
     protected function sendToHec( string $payload ): array
     {
         try {
+            // $payload is already a JSON-encoded string. Http::post()'s second
+            // argument is structured data that the client re-encodes — using
+            // it here would double-encode the body and Splunk HEC would
+            // reject the payload. withBody() sends the raw bytes verbatim.
             $response = Http::withHeaders( [
                 'Authorization' => 'Splunk ' . $this->config['hec_token'],
-                'Content-Type'  => 'application/json',
             ] )
                 ->withOptions( ['verify' => $this->config['verify_ssl']] )
-                ->post( $this->config['hec_url'], $payload );
+                ->withBody( $payload, 'application/json' )
+                ->post( $this->config['hec_url'] );
 
             if ( $response->successful() ) {
                 return [

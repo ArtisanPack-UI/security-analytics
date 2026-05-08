@@ -192,9 +192,9 @@ class SecurityEventList extends Component
         if ( $this->search ) {
             $query->where( function ( $q ): void {
                 $q->where( 'event_name', 'like', "%{$this->search}%" )
-                    ->orWhere( 'ip_address', 'like', "%{$this->search}%")
-                    ->orWhere( 'url', 'like', "%{$this->search}%");
-            });
+                    ->orWhere( 'ip_address', 'like', "%{$this->search}%" )
+                    ->orWhere( 'url', 'like', "%{$this->search}%" );
+            } );
         }
 
         return $query;

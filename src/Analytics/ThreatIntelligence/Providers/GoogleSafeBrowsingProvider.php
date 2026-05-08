@@ -258,7 +258,7 @@ class GoogleSafeBrowsingProvider extends AbstractProvider
 
         foreach ( $matches as $match ) {
             $threatType = $match['threatType'] ?? '';
-            if ( isset( $categoryMap[ $threatType ] ) && ! in_array( $categoryMap[ $threatType ], $categories, true)) {
+            if ( isset( $categoryMap[ $threatType ] ) && ! in_array( $categoryMap[ $threatType ], $categories, true ) ) {
                 $categories[] = $categoryMap[ $threatType ];
             }
         }

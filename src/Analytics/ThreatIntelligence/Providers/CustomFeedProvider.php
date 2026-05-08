@@ -431,7 +431,7 @@ class CustomFeedProvider extends AbstractProvider
                     'confidence'   => $indicator['confidence'],
                     'metadata'     => $indicator['metadata'] ?? [],
                     'last_seen_at' => now(),
-                    'expires_at'   => now()->addDays( $ttlDays),
+                    'expires_at'   => now()->addDays( $ttlDays ),
                 ],
             );
 

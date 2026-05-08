@@ -439,7 +439,7 @@ class IncidentResponder
     /**
      * Get playbook context key for cooldown.
      */
-    protected function getPlaybookContextKey( Anomaly $anomaly): string
+    protected function getPlaybookContextKey( Anomaly $anomaly ): string
     {
         return "{$anomaly->category}:{$anomaly->user_id}";
     }

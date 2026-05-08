@@ -149,7 +149,7 @@ class AuthenticationMetricsListener
         $events->listen( Logout::class, [self::class, 'handleLogout'] );
         $events->listen( Lockout::class, [self::class, 'handleLockout'] );
         $events->listen( PasswordReset::class, [self::class, 'handlePasswordReset'] );
-        $events->listen( Registered::class, [self::class, 'handleRegistered']);
+        $events->listen( Registered::class, [self::class, 'handleRegistered'] );
         $events->listen( Verified::class, [self::class, 'handleVerified']);
     }
 }

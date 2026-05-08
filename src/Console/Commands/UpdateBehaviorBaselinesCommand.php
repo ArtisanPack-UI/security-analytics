@@ -142,9 +142,9 @@ class UpdateBehaviorBaselinesCommand extends Command
 
         $deleted = UserBehaviorProfile::where( 'sample_count', '<', $minSamples )
             ->where( 'confidence_score', '<', $minConfidence )
-            ->where( 'created_at', '<', now()->subDays( 7))
+            ->where( 'created_at', '<', now()->subDays( 7 ) )
             ->delete();
 
-        $this->info( "Pruned {$deleted} insufficient profiles.");
+        $this->info( "Pruned {$deleted} insufficient profiles." );
     }
 }
