@@ -28,8 +28,8 @@ In order to make this a best place for everyone to contribute, there are some ha
 
 There are a lot of ways to contribute to `security-analytics` even if you're not a developer. Here are some (but not all) of them:
 
-* Write code for the package — validators, scanners, middleware, rules
-* Add or improve tests, including malware-scanner test fixtures
+* Write code for the package — event loggers, anomaly detectors, threat-intel providers, SIEM exporters, alert channels, incident-response actions
+* Add or improve tests, including detector fixtures and event-stream replays
 * Test the package against your own Laravel app and report bugs
 * Write documentation, examples, and recipes
 * Talk about `security-analytics` on your blog or social media
@@ -413,7 +413,7 @@ If you can't use GitHub at all, submit a patch:
 
 5. **Maintainer applies the patch**
    ```bash
-   git apply my-contribution.patch
+   git am my-contribution.patch
    ```
 
 ### Keeping Your Fork Updated
