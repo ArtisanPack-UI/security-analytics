@@ -12,7 +12,7 @@ on:
 
 jobs:
   claude-review:
-    if: false # Temporarily disabled while actively developing
+    if: ${{ vars.ENABLE_CLAUDE_REVIEW == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
