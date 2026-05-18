@@ -92,6 +92,7 @@ The dashboard views ship as plain HTML + Tailwind by design — the package does
 
 | Package | Scope |
 |---|---|
+| [`artisanpack-ui/security-full`](https://github.com/ArtisanPack-UI/security-full) | Meta-package — pulls in the full security suite (all six packages below) in a single require |
 | [`artisanpack-ui/security`](https://github.com/ArtisanPack-UI/security) | Core: input sanitization, escaping, CSP, security headers |
 | [`artisanpack-ui/security-auth`](https://github.com/ArtisanPack-UI/security-auth) | 2FA, password complexity, account lockout, sessions |
 | [`artisanpack-ui/security-advanced-auth`](https://github.com/ArtisanPack-UI/security-advanced-auth) | WebAuthn, SSO, social login |

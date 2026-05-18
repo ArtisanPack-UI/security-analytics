@@ -3,7 +3,7 @@
   "description": "Security analytics for Laravel — security event logging, anomaly detection, threat intelligence, SIEM export (Splunk, Datadog, Elasticsearch, syslog), incident response, alerting, and dashboards.",
   "type": "library",
   "license": "MIT",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "keywords": [
     "laravel",
     "security",

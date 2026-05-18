@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-05-18
+
 ### Added
 
 - Initial release of the standalone Security Analytics package, extracted from `artisanpack-ui/security` 1.x as part of the Security 2.0 package split.
