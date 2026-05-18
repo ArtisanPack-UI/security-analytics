@@ -112,16 +112,11 @@ class SecurityAnalyticsServiceProvider extends ServiceProvider
         $this->loadViewsFrom( __DIR__ . '/../resources/views', 'artisanpack-ui-security-analytics' );
         $this->loadViewsFrom( __DIR__ . '/../resources/views', 'security-analytics' );
 
-        // Dashboard routes — single file covering both the Livewire UI pages
-        // and the JSON API endpoints. Only loaded when the dashboard is
-        // enabled AND livewire/livewire is actually installed (the UI page
-        // routes register Livewire components directly).
-        if (
-            config( 'artisanpack.security-analytics.dashboard.enabled', true )
-            && class_exists( \Livewire\Component::class )
-        ) {
-            $this->loadRoutesFrom( __DIR__ . '/../routes/dashboard.php' );
-        }
+        // Dashboard routes — single file covering both the JSON API endpoints
+        // (always available) and the Livewire UI pages (conditionally registered
+        // inside the routes file when livewire/livewire is installed). The
+        // routes file itself short-circuits when the dashboard is disabled.
+        $this->loadRoutesFrom( __DIR__ . '/../routes/dashboard.php' );
 
         if ( $this->app->runningInConsole() ) {
             $this->commands( [

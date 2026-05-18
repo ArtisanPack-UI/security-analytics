@@ -64,12 +64,7 @@ Mount the dashboard:
 
 ## Dashboard Blade views
 
-The dashboard views ship as plain HTML + Tailwind by design — the package does not depend on `artisanpack-ui/livewire-ui-components`. To use richer UI components in your app, publish the views and customize:
-
-```bash
-# (After publishable views are added — currently override by placing files in
-# resources/views/vendor/security-analytics/livewire/*.blade.php)
-```
+The dashboard views ship as plain HTML + Tailwind by design — the package does not depend on `artisanpack-ui/livewire-ui-components`. To customize them, shadow the package views by placing your own files at `resources/views/vendor/security-analytics/livewire/*.blade.php` — Laravel resolves overrides before package defaults.
 
 ## Documentation
 

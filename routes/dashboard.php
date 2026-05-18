@@ -3,10 +3,6 @@
 declare(strict_types=1);
 
 use ArtisanPackUI\SecurityAnalytics\Http\Controllers\SecurityDashboardController;
-use ArtisanPackUI\SecurityAnalytics\Livewire\SecurityDashboard;
-use ArtisanPackUI\SecurityAnalytics\Livewire\SecurityEventList;
-use ArtisanPackUI\SecurityAnalytics\Livewire\SecurityStats;
-use ArtisanPackUI\SecurityAnalytics\Livewire\SuspiciousActivityList;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -15,9 +11,10 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 |
 | Two route groups:
-|   1. Livewire UI pages — full HTML pages backed by Livewire components.
-|   2. JSON API endpoints — data feeds the UI consumes (and any external
-|      consumers that want to drive their own dashboards).
+|   1. JSON API endpoints — always loaded; no Livewire dependency. Data
+|      feeds the bundled UI plus any external consumer that wants to drive
+|      its own dashboard.
+|   2. Livewire UI pages — only registered when Livewire is installed.
 |
 | Both groups respect the same `artisanpack.security-analytics.dashboard.*`
 | config so consumers can disable the dashboard wholesale, change the
@@ -25,22 +22,13 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+if ( ! config( 'artisanpack.security-analytics.dashboard.enabled', true ) ) {
+    return;
+}
+
 $middleware = config( 'artisanpack.security-analytics.dashboard.middleware', ['web', 'auth'] );
 
-// --- Livewire UI pages -----------------------------------------------------
-$uiPrefix = config( 'artisanpack.security-analytics.dashboard.routePrefix', 'security' );
-
-Route::middleware( $middleware )
-    ->prefix( $uiPrefix )
-    ->name( 'security.' )
-    ->group( function (): void {
-        Route::get( '/dashboard', SecurityDashboard::class )->name( 'dashboard' );
-        Route::get( '/events', SecurityEventList::class )->name( 'events' );
-        Route::get( '/stats', SecurityStats::class )->name( 'stats' );
-        Route::get( '/suspicious-activity', SuspiciousActivityList::class )->name( 'suspicious-activity' );
-    } );
-
-// --- JSON API endpoints ----------------------------------------------------
+// --- JSON API endpoints (always available) ---------------------------------
 $apiPrefix = config( 'artisanpack.security-analytics.dashboard.apiPrefix', 'security/analytics' );
 
 Route::middleware( $middleware )
@@ -58,3 +46,18 @@ Route::middleware( $middleware )
         Route::get( '/incidents', [SecurityDashboardController::class, 'incidents'] )->name( 'incidents' );
         Route::post( '/alerts/{alert}/acknowledge', [SecurityDashboardController::class, 'acknowledgeAlert'] )->name( 'alerts.acknowledge' );
     } );
+
+// --- Livewire UI pages (only when Livewire is installed) -------------------
+if ( class_exists( \Livewire\Component::class ) ) {
+    $uiPrefix = config( 'artisanpack.security-analytics.dashboard.routePrefix', 'security' );
+
+    Route::middleware( $middleware )
+        ->prefix( $uiPrefix )
+        ->name( 'security.' )
+        ->group( function (): void {
+            Route::get( '/dashboard', \ArtisanPackUI\SecurityAnalytics\Livewire\SecurityDashboard::class )->name( 'dashboard' );
+            Route::get( '/events', \ArtisanPackUI\SecurityAnalytics\Livewire\SecurityEventList::class )->name( 'events' );
+            Route::get( '/stats', \ArtisanPackUI\SecurityAnalytics\Livewire\SecurityStats::class )->name( 'stats' );
+            Route::get( '/suspicious-activity', \ArtisanPackUI\SecurityAnalytics\Livewire\SuspiciousActivityList::class )->name( 'suspicious-activity' );
+        } );
+}
