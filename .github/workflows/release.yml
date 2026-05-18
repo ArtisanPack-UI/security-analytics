@@ -62,7 +62,7 @@ jobs:
           echo "Extracting notes for version $VERSION"
 
           if [ ! -f "CHANGELOG.md" ]; then
-            echo "body=Release v$VERSION" >> $GITHUB_OUTPUT
+            echo "Release v$VERSION" > release_notes.txt
             exit 0
           fi
 
@@ -97,7 +97,7 @@ jobs:
       - name: Update Packagist
         if: success()
         run: |
-          curl -s -X POST \
+          curl --fail-with-body --show-error --retry 3 --retry-delay 2 --max-time 30 -X POST \
             "https://packagist.org/api/update-package?username=${{ secrets.PACKAGIST_USERNAME }}&apiToken=${{ secrets.PACKAGIST_API_TOKEN }}" \
             -d "{\"repository\":{\"url\":\"https://github.com/${{ github.repository }}\"}}" \
             -H "Content-Type: application/json"
