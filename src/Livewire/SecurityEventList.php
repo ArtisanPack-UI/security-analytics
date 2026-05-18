@@ -1,5 +1,16 @@
 <?php
 
+/**
+ * SecurityEventList Livewire component.
+ *
+ * @package    ArtisanPack_UI
+ * @subpackage SecurityAnalytics
+ *
+ * @author     Jacob Martella <support@artisanpackui.dev>
+ *
+ * @since      1.0.0
+ */
+
 declare( strict_types=1 );
 
 namespace ArtisanPackUI\SecurityAnalytics\Livewire;
@@ -162,7 +173,7 @@ class SecurityEventList extends Component
 
     public function render()
     {
-        return view( 'security::livewire.security-event-list', [
+        return view( 'security-analytics::livewire.security-event-list', [
             'events' => $this->getFilteredQuery()
                 ->orderBy( $this->sortBy, $this->sortDirection )
                 ->paginate( $this->perPage ),

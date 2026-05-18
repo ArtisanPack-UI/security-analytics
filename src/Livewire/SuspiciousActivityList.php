@@ -1,5 +1,16 @@
 <?php
 
+/**
+ * SuspiciousActivityList Livewire component.
+ *
+ * @package    ArtisanPack_UI
+ * @subpackage SecurityAnalytics
+ *
+ * @author     Jacob Martella <support@artisanpackui.dev>
+ *
+ * @since      1.0.0
+ */
+
 declare( strict_types=1 );
 
 namespace ArtisanPackUI\SecurityAnalytics\Livewire;
@@ -69,13 +80,14 @@ class SuspiciousActivityList extends Component
             SuspiciousActivity::TYPE_IMPOSSIBLE_TRAVEL   => 'Impossible Travel',
             SuspiciousActivity::TYPE_BRUTE_FORCE         => 'Brute Force',
             SuspiciousActivity::TYPE_CREDENTIAL_STUFFING => 'Credential Stuffing',
-            SuspiciousActivity::TYPE_UNUSUAL_LOCATION    => 'Unusual Location',
-            SuspiciousActivity::TYPE_UNUSUAL_DEVICE      => 'Unusual Device',
+            SuspiciousActivity::TYPE_ANOMALOUS_LOGIN     => 'Anomalous Login',
+            SuspiciousActivity::TYPE_PROXY_DETECTED      => 'Proxy Detected',
+            SuspiciousActivity::TYPE_TOR_DETECTED        => 'Tor Detected',
+            SuspiciousActivity::TYPE_DATACENTER_IP       => 'Datacenter IP',
+            SuspiciousActivity::TYPE_MULTIPLE_FAILURES   => 'Multiple Failures',
+            SuspiciousActivity::TYPE_DEVICE_CHANGE       => 'Device Change',
             SuspiciousActivity::TYPE_UNUSUAL_TIME        => 'Unusual Time',
-            SuspiciousActivity::TYPE_RAPID_REQUESTS      => 'Rapid Requests',
-            SuspiciousActivity::TYPE_BOT_BEHAVIOR        => 'Bot Behavior',
-            SuspiciousActivity::TYPE_SESSION_ANOMALY     => 'Session Anomaly',
-            SuspiciousActivity::TYPE_ACCOUNT_ENUMERATION => 'Account Enumeration',
+            SuspiciousActivity::TYPE_SESSION_HIJACKING   => 'Session Hijacking',
         ];
     }
 
@@ -92,7 +104,7 @@ class SuspiciousActivityList extends Component
 
     public function render()
     {
-        return view( 'security::livewire.suspicious-activity-list', [
+        return view( 'security-analytics::livewire.suspicious-activity-list', [
             'activities' => $this->activities,
         ] );
     }

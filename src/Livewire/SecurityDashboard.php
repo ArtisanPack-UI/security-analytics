@@ -1,5 +1,16 @@
 <?php
 
+/**
+ * SecurityDashboard Livewire component.
+ *
+ * @package    ArtisanPack_UI
+ * @subpackage SecurityAnalytics
+ *
+ * @author     Jacob Martella <support@artisanpackui.dev>
+ *
+ * @since      1.0.0
+ */
+
 declare( strict_types=1 );
 
 namespace ArtisanPackUI\SecurityAnalytics\Livewire;
@@ -62,7 +73,7 @@ class SecurityDashboard extends Component
 
     public function render()
     {
-        return view( 'security::livewire.security-dashboard' );
+        return view( 'security-analytics::livewire.security-dashboard' );
     }
 
     protected function getYesterdayStats(): int
