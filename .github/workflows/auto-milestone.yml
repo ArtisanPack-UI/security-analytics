@@ -6,4 +6,4 @@ on:
 
 jobs:
   auto-milestone:
-    uses: ArtisanPack-UI/.github/.github/workflows/auto-milestone.yml@main
+    uses: ArtisanPack-UI/.github/.github/workflows/auto-milestone.yml@7329ccfac5f658e9528413eb8a8e3cc5b5a95512 # main
