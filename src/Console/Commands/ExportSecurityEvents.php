@@ -1,5 +1,16 @@
 <?php
 
+/**
+ * `ExportSecurityEvents` Artisan command.
+ *
+ * @package    ArtisanPack_UI
+ * @subpackage SecurityAnalytics
+ *
+ * @author     Jacob Martella <support@artisanpackui.dev>
+ *
+ * @since      1.0.0
+ */
+
 declare( strict_types=1 );
 
 namespace ArtisanPackUI\SecurityAnalytics\Console\Commands;

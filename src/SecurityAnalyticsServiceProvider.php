@@ -1,5 +1,16 @@
 <?php
 
+/**
+ * Security Analytics service provider.
+ *
+ * @package    ArtisanPack_UI
+ * @subpackage SecurityAnalytics
+ *
+ * @author     Jacob Martella <support@artisanpackui.dev>
+ *
+ * @since      1.0.0
+ */
+
 declare( strict_types=1 );
 
 namespace ArtisanPackUI\SecurityAnalytics;
@@ -94,23 +105,18 @@ class SecurityAnalyticsServiceProvider extends ServiceProvider
 
         $this->loadMigrationsFrom( __DIR__ . '/../database/migrations' );
 
+        // Register the views under both the legacy long namespace and the
+        // shorter `security-analytics::` alias. Internal references should
+        // use the alias; the long namespace stays for back-compat with any
+        // consumer code that already binds against it.
         $this->loadViewsFrom( __DIR__ . '/../resources/views', 'artisanpack-ui-security-analytics' );
+        $this->loadViewsFrom( __DIR__ . '/../resources/views', 'security-analytics' );
 
-        // Dashboard routes register Livewire components — only load if both
-        // the dashboard is enabled AND livewire/livewire is actually installed.
-        if (
-            config( 'artisanpack.security-analytics.dashboard.enabled', true )
-            && class_exists( \Livewire\Component::class )
-        ) {
-            $this->loadRoutesFrom( __DIR__ . '/../routes/security-dashboard.php' );
-        }
-
-        if (
-            config( 'artisanpack.security-analytics.dashboard.enabled', false )
-            && class_exists( \Livewire\Component::class )
-        ) {
-            $this->loadRoutesFrom( __DIR__ . '/../routes/analytics-dashboard.php' );
-        }
+        // Dashboard routes — single file covering both the JSON API endpoints
+        // (always available) and the Livewire UI pages (conditionally registered
+        // inside the routes file when livewire/livewire is installed). The
+        // routes file itself short-circuits when the dashboard is disabled.
+        $this->loadRoutesFrom( __DIR__ . '/../routes/dashboard.php' );
 
         if ( $this->app->runningInConsole() ) {
             $this->commands( [

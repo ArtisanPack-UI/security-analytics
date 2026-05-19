@@ -1,5 +1,16 @@
 <?php
 
+/**
+ * SecurityStats Livewire component.
+ *
+ * @package    ArtisanPack_UI
+ * @subpackage SecurityAnalytics
+ *
+ * @author     Jacob Martella <support@artisanpackui.dev>
+ *
+ * @since      1.0.0
+ */
+
 declare( strict_types=1 );
 
 namespace ArtisanPackUI\SecurityAnalytics\Livewire;
@@ -41,7 +52,7 @@ class SecurityStats extends Component
 
     public function render()
     {
-        return view( 'security::livewire.security-stats' );
+        return view( 'security-analytics::livewire.security-stats' );
     }
 
     protected function loadStats( SecurityEventLoggerInterface $logger ): void

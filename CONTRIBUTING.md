@@ -42,7 +42,7 @@ There are a lot of ways to contribute to `security-analytics` even if you're not
 
 Before contributing, make sure you have:
 - Git installed on your machine
-- PHP 8.1 or higher
+- PHP 8.2 or higher
 - Composer
 - A GitHub account
 

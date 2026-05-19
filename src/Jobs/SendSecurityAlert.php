@@ -1,6 +1,17 @@
 <?php
 
-declare(strict_types=1);
+/**
+ * SendSecurityAlert background job.
+ *
+ * @package    ArtisanPack_UI
+ * @subpackage SecurityAnalytics
+ *
+ * @author     Jacob Martella <support@artisanpackui.dev>
+ *
+ * @since      1.0.0
+ */
+
+declare( strict_types=1 );
 
 namespace ArtisanPackUI\SecurityAnalytics\Jobs;
 
@@ -14,10 +25,16 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use InvalidArgumentException;
+use Log;
+use Throwable;
 
 class SendSecurityAlert implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+use InteractsWithQueue;
+use Queueable;
+use SerializesModels;
 
     /**
      * The number of times the job may be attempted.
@@ -49,17 +66,17 @@ class SendSecurityAlert implements ShouldQueue
     public function __construct(
         protected array $alertData,
         protected ?array $channels = null,
-        protected ?int $alertRuleId = null
+        protected ?int $alertRuleId = null,
     ) {
     }
 
     /**
      * Execute the job.
      */
-    public function handle(AlertManager $alertManager): void
+    public function handle( AlertManager $alertManager ): void
     {
-        if (!isset($this->alertData['title'], $this->alertData['message'])) {
-            throw new \InvalidArgumentException('Alert data must contain title and message');
+        if ( !isset( $this->alertData['title'], $this->alertData['message'] ) ) {
+            throw new InvalidArgumentException( 'Alert data must contain title and message' );
         }
 
         $alert = new SecurityAlert(
@@ -67,56 +84,56 @@ class SendSecurityAlert implements ShouldQueue
             message: $this->alertData['message'],
             severity: $this->alertData['severity'] ?? 'medium',
             category: $this->alertData['category'] ?? 'security',
-            metadata: $this->alertData['metadata'] ?? []
+            metadata: $this->alertData['metadata'] ?? [],
         );
 
         // Set channels if specified
-        if ($this->channels) {
-            $alert->setChannels($this->channels);
+        if ( $this->channels ) {
+            $alert->setChannels( $this->channels );
         }
 
         // Send the alert
-        $results = $alertManager->send($alert);
+        $results = $alertManager->send( $alert );
 
         // Record alert history
-        foreach ($results as $channel => $result) {
-            AlertHistory::create([
-                'rule_id' => $this->alertRuleId,
-                'anomaly_id' => $this->alertData['anomaly_id'] ?? null,
-                'incident_id' => $this->alertData['incident_id'] ?? null,
-                'severity' => $alert->getSeverity(),
-                'channel' => $channel,
-                'recipient' => $result['recipient'] ?? null,
-                'status' => $result['success'] ? AlertHistory::STATUS_SENT : AlertHistory::STATUS_FAILED,
-                'message' => $alert->getMessage(),
-                'sent_at' => $result['success'] ? now() : null,
+        foreach ( $results as $channel => $result ) {
+            AlertHistory::create( [
+                'rule_id'       => $this->alertRuleId,
+                'anomaly_id'    => $this->alertData['anomaly_id'] ?? null,
+                'incident_id'   => $this->alertData['incident_id'] ?? null,
+                'severity'      => $alert->getSeverity(),
+                'channel'       => $channel,
+                'recipient'     => $result['recipient'] ?? null,
+                'status'        => $result['success'] ? AlertHistory::STATUS_SENT : AlertHistory::STATUS_FAILED,
+                'message'       => $alert->getMessage(),
+                'sent_at'       => $result['success'] ? now() : null,
                 'error_message' => $result['error'] ?? null,
-            ]);
+            ] );
         }
     }
 
     /**
      * Handle a job failure.
      */
-    public function failed(\Throwable $exception): void
+    public function failed( Throwable $exception ): void
     {
-        \Log::error('Failed to send security alert', [
-            'exception' => $exception->getMessage(),
+        Log::error( 'Failed to send security alert', [
+            'exception'   => $exception->getMessage(),
             'alert_title' => $this->alertData['title'] ?? 'Unknown',
-            'severity' => $this->alertData['severity'] ?? 'unknown',
-        ]);
+            'severity'    => $this->alertData['severity'] ?? 'unknown',
+        ] );
 
         // Record failed attempt
-        AlertHistory::create([
-            'rule_id' => $this->alertRuleId,
-            'anomaly_id' => $this->alertData['anomaly_id'] ?? null,
-            'incident_id' => $this->alertData['incident_id'] ?? null,
-            'severity' => $this->alertData['severity'] ?? 'medium',
-            'channel' => 'unknown',
-            'status' => AlertHistory::STATUS_FAILED,
-            'message' => $this->alertData['message'] ?? '',
+        AlertHistory::create( [
+            'rule_id'       => $this->alertRuleId,
+            'anomaly_id'    => $this->alertData['anomaly_id'] ?? null,
+            'incident_id'   => $this->alertData['incident_id'] ?? null,
+            'severity'      => $this->alertData['severity'] ?? 'medium',
+            'channel'       => 'unknown',
+            'status'        => AlertHistory::STATUS_FAILED,
+            'message'       => $this->alertData['message'] ?? '',
             'error_message' => $exception->getMessage(),
-        ]);
+        ] );
     }
 
     /**
@@ -126,48 +143,50 @@ class SendSecurityAlert implements ShouldQueue
      */
     public function tags(): array
     {
+        $severity = $this->alertData['severity'] ?? 'medium';
+
         return [
             'security',
             'alert',
-            "severity:{$this->alertData['severity'] ?? 'medium'}",
+            "severity:{$severity}",
         ];
     }
 
     /**
      * Create a job for an anomaly alert.
      */
-    public static function forAnomaly(Anomaly $anomaly): self
+    public static function forAnomaly( Anomaly $anomaly ): self
     {
-        return new self([
-            'title' => "Anomaly Detected: {$anomaly->category}",
-            'message' => $anomaly->description,
-            'severity' => $anomaly->severity,
-            'category' => 'anomaly',
+        return new self( [
+            'title'      => "Anomaly Detected: {$anomaly->category}",
+            'message'    => $anomaly->description,
+            'severity'   => $anomaly->severity,
+            'category'   => 'anomaly',
             'anomaly_id' => $anomaly->id,
-            'metadata' => [
-                'detector' => $anomaly->detector,
-                'score' => $anomaly->score,
-                'user_id' => $anomaly->user_id,
+            'metadata'   => [
+                'detector'   => $anomaly->detector,
+                'score'      => $anomaly->score,
+                'user_id'    => $anomaly->user_id,
                 'ip_address' => $anomaly->ip_address,
             ],
-        ]);
+        ] );
     }
 
     /**
      * Create a job for an incident alert.
      */
-    public static function forIncident(SecurityIncident $incident): self
+    public static function forIncident( SecurityIncident $incident ): self
     {
-        return new self([
-            'title' => "Security Incident: {$incident->incident_number}",
-            'message' => $incident->description,
-            'severity' => $incident->severity,
-            'category' => 'incident',
+        return new self( [
+            'title'       => "Security Incident: {$incident->incident_number}",
+            'message'     => $incident->description,
+            'severity'    => $incident->severity,
+            'category'    => 'incident',
             'incident_id' => $incident->id,
-            'metadata' => [
-                'status' => $incident->status,
+            'metadata'    => [
+                'status'   => $incident->status,
                 'category' => $incident->category,
             ],
-        ]);
+        ] );
     }
 }
