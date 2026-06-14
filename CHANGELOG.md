@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-06-14
+
+### Added
+
+- Laravel 13 support. The `illuminate/support` constraint now accepts `^10.0|^11.0|^12.0|^13.0`, and the test toolchain (`orchestra/testbench`, `pestphp/pest`, `pestphp/pest-plugin-laravel`) was widened so the Laravel 13 leg installs cleanly.
+
+### Changed
+
+- CI now runs the test suite as a matrix across Laravel 12 and 13 × PHP 8.2-8.4 × Livewire 3.6 and 4.0 (Laravel 13 / PHP 8.2 excluded — Laravel 13 requires PHP 8.3+). CI also triggers on `release/**` branches and overrides `composer config platform.php` per matrix row so the Laravel 13 leg resolves correctly despite the repo's PHP 8.2 platform pin.
+
 ## [1.0.0] - 2026-05-18
 
 ### Added

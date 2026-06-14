@@ -10,7 +10,7 @@ title: Requirements
 
 ## Laravel
 
-- Laravel 10 / 11 / 12
+- Laravel 10 / 11 / 12 / 13
 
 ## Composer dependencies (pulled in automatically)
 

@@ -80,7 +80,7 @@ The dashboard views ship as plain HTML + Tailwind by design — the package does
 ## Requirements
 
 - PHP 8.2+
-- Laravel 10 / 11 / 12
+- Laravel 10 / 11 / 12 / 13
 - `livewire/livewire` ^3.6 or ^4.0 (only required for the dashboard UI; the rest of the package works without Livewire)
 
 ## Sibling packages
