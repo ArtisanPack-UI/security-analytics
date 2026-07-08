@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Three AI-assisted features registered via `artisanpack-ui/ai`:
+  - `security.threat_triage` — `ThreatTriageAgent` + `ThreatTriagePanel` Livewire component (default model `claude-sonnet-4-6`). Plain-language severity + recommended actions for a `SecurityEvent`. Closes #20.
+  - `security.anomaly_summary` — `AnomalySummaryAgent` + `AnomalySummaryPanel` Livewire component (default model `claude-haiku-4-5-20251001`). Periodic digest of unusual events over a configurable window. Closes #21.
+  - `security.incident_response` — `IncidentResponseAgent` + `IncidentResponsePanel` Livewire component (default model `claude-opus-4-7`). Advisory-only next-step suggestions for open incidents. Closes #22.
+- Service provider now exposes an `aiFeatures()` method so the three features are auto-discovered by `artisanpack-ui/ai`'s boot pass.
+- README "AI features" section documenting the three surfaces, and shipped Blade views under `resources/views/livewire/{threat-triage,anomaly-summary,incident-response}-panel.blade.php`.
+
+### Changed
+
+- Minimum PHP requirement bumped from 8.2 to 8.3 to align with `artisanpack-ui/ai`'s transitive `laravel/ai` dependency.
+- `composer.json` now requires `artisanpack-ui/ai ^1.0.0-alpha.1` and declares a development-only `path` repository against `../ai` (CI strips this before release, matching the pattern used by `artisanpack-ui/visual-editor`).
+
 ## [1.0.1] - 2026-06-14
 
 ### Added
