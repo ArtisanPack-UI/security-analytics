@@ -15,6 +15,9 @@ declare( strict_types=1 );
 
 namespace ArtisanPackUI\SecurityAnalytics;
 
+use ArtisanPackUI\SecurityAnalytics\AI\Agents\AnomalySummaryAgent;
+use ArtisanPackUI\SecurityAnalytics\AI\Agents\IncidentResponseAgent;
+use ArtisanPackUI\SecurityAnalytics\AI\Agents\ThreatTriageAgent;
 use ArtisanPackUI\SecurityAnalytics\Analytics\Alerting\AlertManager;
 use ArtisanPackUI\SecurityAnalytics\Analytics\Alerting\Channels\DatabaseChannel;
 use ArtisanPackUI\SecurityAnalytics\Analytics\Alerting\Channels\OpsGenieChannel;
@@ -133,6 +136,43 @@ class SecurityAnalyticsServiceProvider extends ServiceProvider
                 UpdateBehaviorBaselinesCommand::class,
             ] );
         }
+    }
+
+    /**
+     * AI features contributed by this package.
+     *
+     * Discovered by `artisanpack-ui/ai`'s auto-registration pass in the
+     * `AiServiceProvider::boot()` cycle, which walks every registered
+     * service provider looking for this method. Feature keys map to an
+     * agent class + metadata; each entry is toggleable at runtime via the
+     * feature registry.
+     *
+     * @since 1.1.0
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public function aiFeatures(): array
+    {
+        return [
+            'security.threat_triage' => [
+                'agent'       => ThreatTriageAgent::class,
+                'package'     => 'artisanpack-ui/security-analytics',
+                'label'       => 'Threat triage',
+                'description' => 'Plain-language severity and recommended actions for a security event.',
+            ],
+            'security.anomaly_summary' => [
+                'agent'       => AnomalySummaryAgent::class,
+                'package'     => 'artisanpack-ui/security-analytics',
+                'label'       => 'Anomaly summary',
+                'description' => 'Periodic digest of unusual security events for out-of-band stakeholders.',
+            ],
+            'security.incident_response' => [
+                'agent'       => IncidentResponseAgent::class,
+                'package'     => 'artisanpack-ui/security-analytics',
+                'label'       => 'Incident response',
+                'description' => 'Suggested next steps for an open incident. Advisory only — never triggers actions.',
+            ],
+        ];
     }
 
     /**

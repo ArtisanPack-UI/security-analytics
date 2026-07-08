@@ -20,6 +20,42 @@ This package is part of the **ArtisanPack UI Security 2.0** split — the analyt
 - **Events** (3) — `SecurityEventOccurred`, `AnomalyDetected`, `SuspiciousActivityDetected` — subscribe to integrate with downstream systems.
 - `SecurityAnalytics` Facade + `security_analytics()` helper.
 
+## AI features
+
+The package registers three AI-assisted surfaces via `artisanpack-ui/ai` when installed. Each is a plain Livewire component wired to an agent that extends `ArtisanPackUI\Ai\Agents\ArtisanPackAgent`, so it inherits the shared feature toggle, credential resolver, cache pipeline, and usage tracking.
+
+| Feature key | Agent | Livewire component | Default model | Purpose |
+|---|---|---|---|---|
+| `security.threat_triage` | `ThreatTriageAgent` | `ThreatTriagePanel` | `claude-sonnet-4-6` | Plain-language severity and recommended actions for a single `SecurityEvent`. |
+| `security.anomaly_summary` | `AnomalySummaryAgent` | `AnomalySummaryPanel` | `claude-haiku-4-5-20251001` | Periodic digest of unusual events over a configurable window (default 24h). |
+| `security.incident_response` | `IncidentResponseAgent` | `IncidentResponsePanel` | `claude-opus-4-7` | Suggested next steps for an open `SecurityIncident`. Advisory only — never triggers actions. |
+
+Features are discovered automatically from the service provider's `aiFeatures()` method by the `artisanpack-ui/ai` boot pass — no manual registration required. Each feature is togglable at runtime via the shared feature registry, and each Livewire panel renders a disabled state when the feature is off or when credentials cannot be resolved (no LLM calls happen in either case).
+
+Render a panel inline anywhere you have an event or incident:
+
+```blade
+{{-- On the security-event detail surface --}}
+<livewire:threat-triage-panel :event-id="$event->id" />
+
+{{-- Somewhere on the dashboard --}}
+<livewire:anomaly-summary-panel />
+
+{{-- On the incident detail surface --}}
+<livewire:incident-response-panel :incident-id="$incident->id" />
+```
+
+The three agents are also invocable directly from PHP:
+
+```php
+use ArtisanPackUI\SecurityAnalytics\AI\Agents\ThreatTriageAgent;
+
+$triage = ThreatTriageAgent::for( $securityEvent )->run();
+// [ 'severity' => 'high', 'summary' => '…', 'recommended_actions' => [ … ], 'related_events' => [ … ] ]
+```
+
+Override the shipped Blade views by shadowing them under `resources/views/vendor/security-analytics/livewire/{threat-triage-panel,anomaly-summary-panel,incident-response-panel}.blade.php`.
+
 ## Installation
 
 ```bash
@@ -79,10 +115,10 @@ The dashboard views ship as plain HTML + Tailwind by design — the package does
 
 ## Requirements
 
-- PHP 8.2+
-- Laravel 10 / 11 / 12
-- Laravel 13 (requires PHP 8.3+)
-- `livewire/livewire` ^3.6 or ^4.0 (only required for the dashboard UI; the rest of the package works without Livewire)
+- PHP 8.3+
+- Laravel 10 / 11 / 12 / 13
+- `artisanpack-ui/ai` ^1.0.0-alpha.1 — foundation for the three AI features (see [AI features](#ai-features))
+- `livewire/livewire` ^3.6 or ^4.0 (only required for the dashboard UI + AI panels; the rest of the package works without Livewire)
 
 ## Sibling packages
 
