@@ -6,6 +6,9 @@ use ArtisanPackUI\Ai\Contracts\CredentialResolver;
 use ArtisanPackUI\Ai\Contracts\FeatureRegistry;
 use ArtisanPackUI\Ai\Credentials\ChainedCredentialResolver;
 use ArtisanPackUI\Ai\Credentials\Credentials;
+use ArtisanPackUI\SecurityAnalytics\AI\Agents\AnomalySummaryAgent;
+use ArtisanPackUI\SecurityAnalytics\AI\Agents\IncidentResponseAgent;
+use ArtisanPackUI\SecurityAnalytics\AI\Agents\ThreatTriageAgent;
 use ArtisanPackUI\SecurityAnalytics\Livewire\AnomalySummaryPanel;
 use ArtisanPackUI\SecurityAnalytics\Livewire\IncidentResponsePanel;
 use ArtisanPackUI\SecurityAnalytics\Livewire\ThreatTriagePanel;
@@ -38,6 +41,10 @@ beforeEach( function (): void {
         defaultModel: 'claude-sonnet-4-6',
     ) );
     $resolver->useStore( fn () => null );
+
+    ThreatTriageAgent::fake( [] );
+    AnomalySummaryAgent::fake( [] );
+    IncidentResponseAgent::fake( [] );
 } );
 
 it( 'renders the ThreatTriagePanel', function (): void {

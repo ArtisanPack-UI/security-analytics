@@ -17,8 +17,12 @@ namespace ArtisanPackUI\SecurityAnalytics\AI\Agents;
 
 use ArtisanPackUI\Ai\Agents\ArtisanPackAgent;
 use ArtisanPackUI\Ai\Credentials\Credentials;
+use ArtisanPackUI\SecurityAnalytics\AI\Concerns\CallsLaravelAi;
 use ArtisanPackUI\SecurityAnalytics\Models\Anomaly;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
 use InvalidArgumentException;
+use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\HasStructuredOutput;
 
 /**
  * Produces a periodic (daily / weekly) digest of unusual security activity.
@@ -38,8 +42,10 @@ use InvalidArgumentException;
  *
  * @since      1.1.0
  */
-class AnomalySummaryAgent extends ArtisanPackAgent
+class AnomalySummaryAgent extends ArtisanPackAgent implements Agent, HasStructuredOutput
 {
+    use CallsLaravelAi;
+
     /**
      * Feature key registered with the AI feature registry.
      *
@@ -152,6 +158,34 @@ class AnomalySummaryAgent extends ArtisanPackAgent
     }
 
     /**
+     * Structured-output schema for laravel/ai. Mirrors {@see outputSchema()}
+     * but uses the fluent {@see JsonSchema} builder that the provider layer
+     * expects.
+     *
+     * @return array<string, \Illuminate\JsonSchema\Types\Type>
+     */
+    public function schema( JsonSchema $schema ): array
+    {
+        $severityBucket = $schema->object( [
+            'severity' => $schema->string()->enum( [ 'info', 'low', 'medium', 'high', 'critical' ] )->required(),
+            'count'    => $schema->integer()->required(),
+        ] );
+
+        $detectorBucket = $schema->object( [
+            'detector' => $schema->string()->required(),
+            'count'    => $schema->integer()->required(),
+        ] );
+
+        return [
+            'headline'              => $schema->string()->required(),
+            'body'                  => $schema->string()->required(),
+            'top_severities'        => $schema->array()->items( $severityBucket )->required(),
+            'top_detectors'         => $schema->array()->items( $detectorBucket )->required(),
+            'recommended_followups' => $schema->array()->items( $schema->string() )->required(),
+        ];
+    }
+
+    /**
      * Call the provider with the digest payload.
      *
      * Input shape:
@@ -168,13 +202,26 @@ class AnomalySummaryAgent extends ArtisanPackAgent
      */
     protected function execute( Credentials $credentials, string $model, string $instructions ): array
     {
+        return $this->promptStructured(
+            credentials: $credentials,
+            model: $model,
+            userPrompt: $this->buildUserPrompt(),
+        );
+    }
+
+    /**
+     * Assemble the user-role prompt sent alongside the system-role
+     * `instructions()`. The payload is a JSON snapshot of the anomaly
+     * window plus aggregate statistics.
+     */
+    protected function buildUserPrompt(): string
+    {
         $payload = $this->payload();
 
-        return [
-            'output'        => $this->fallbackOutput( $payload ),
-            'input_tokens'  => 0,
-            'output_tokens' => 0,
-        ];
+        return "Produce a security anomaly digest and return the structured JSON per the schema.\n\n"
+            . 'Window (hours): ' . $payload['window_hours'] . "\n\n"
+            . 'Anomalies in window:' . "\n" . json_encode( $payload['anomalies'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . "\n\n"
+            . 'Aggregate statistics:' . "\n" . json_encode( $payload['statistics'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
     }
 
     /**
@@ -285,57 +332,5 @@ class AnomalySummaryAgent extends ArtisanPackAgent
             'by_severity' => $bySeverity,
             'by_detector' => $byDetector,
         ];
-    }
-
-    /**
-     * Neutral fallback payload used until laravel/ai wiring lands.
-     *
-     * @param  array{ window_hours: int, anomalies: array<int, array<string, mixed>>, statistics: array<string, mixed> }  $payload
-     *
-     * @return array<string, mixed>
-     */
-    protected function fallbackOutput( array $payload ): array
-    {
-        $stats      = $payload['statistics'];
-        $total      = (int) ( $stats['total_count'] ?? 0 );
-        $bySeverity = $stats['by_severity'] ?? [];
-        $byDetector = $stats['by_detector'] ?? [];
-
-        $headline = 0 === $total
-            ? sprintf( 'No anomalies in the last %d hours.', $payload['window_hours'] )
-            : sprintf( '%d anomalies detected in the last %d hours.', $total, $payload['window_hours'] );
-
-        return [
-            'headline' => $headline,
-            'body'     => sprintf(
-                'Digest generation is queued for a %d-hour window with %d anomalies. Provide API credentials to enable the LLM-backed narrative.',
-                $payload['window_hours'],
-                $total,
-            ),
-            'top_severities'        => $this->topN( $bySeverity, 'severity', 3 ),
-            'top_detectors'         => $this->topN( $byDetector, 'detector', 3 ),
-            'recommended_followups' => [],
-        ];
-    }
-
-    /**
-     * @param  array<string, int>  $buckets
-     * @param  string              $keyName
-     * @param  int                 $limit
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    protected function topN( array $buckets, string $keyName, int $limit ): array
-    {
-        $result = [];
-
-        foreach ( array_slice( $buckets, 0, $limit, true ) as $key => $count ) {
-            $result[] = [
-                $keyName => (string) $key,
-                'count'  => (int) $count,
-            ];
-        }
-
-        return $result;
     }
 }

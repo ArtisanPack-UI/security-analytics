@@ -17,9 +17,13 @@ namespace ArtisanPackUI\SecurityAnalytics\AI\Agents;
 
 use ArtisanPackUI\Ai\Agents\ArtisanPackAgent;
 use ArtisanPackUI\Ai\Credentials\Credentials;
+use ArtisanPackUI\SecurityAnalytics\AI\Concerns\CallsLaravelAi;
 use ArtisanPackUI\SecurityAnalytics\Models\ResponsePlaybook;
 use ArtisanPackUI\SecurityAnalytics\Models\SecurityIncident;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
 use InvalidArgumentException;
+use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\HasStructuredOutput;
 
 /**
  * Suggests next steps for a security incident.
@@ -35,8 +39,10 @@ use InvalidArgumentException;
  *
  * @since      1.1.0
  */
-class IncidentResponseAgent extends ArtisanPackAgent
+class IncidentResponseAgent extends ArtisanPackAgent implements Agent, HasStructuredOutput
 {
+    use CallsLaravelAi;
+
     /**
      * Feature key registered with the AI feature registry.
      *
@@ -133,6 +139,26 @@ class IncidentResponseAgent extends ArtisanPackAgent
     }
 
     /**
+     * Structured-output schema for laravel/ai. Mirrors {@see outputSchema()}
+     * but uses the fluent {@see JsonSchema} builder that the provider layer
+     * expects.
+     *
+     * @return array<string, \Illuminate\JsonSchema\Types\Type>
+     */
+    public function schema( JsonSchema $schema ): array
+    {
+        $suggestion = $schema->object( [
+            'step'      => $schema->string()->required(),
+            'rationale' => $schema->string()->required(),
+            'risk'      => $schema->string()->enum( [ 'low', 'medium', 'high' ] )->required(),
+        ] );
+
+        return [
+            'suggested_next_actions' => $schema->array()->items( $suggestion )->required(),
+        ];
+    }
+
+    /**
      * Build the LLM input from incident state, timeline, and playbooks.
      *
      * Input shape:
@@ -149,13 +175,26 @@ class IncidentResponseAgent extends ArtisanPackAgent
      */
     protected function execute( Credentials $credentials, string $model, string $instructions ): array
     {
+        return $this->promptStructured(
+            credentials: $credentials,
+            model: $model,
+            userPrompt: $this->buildUserPrompt(),
+        );
+    }
+
+    /**
+     * Assemble the user-role prompt sent alongside the system-role
+     * `instructions()`. The payload is a JSON snapshot of the incident
+     * state, its action timeline, and any matching playbooks.
+     */
+    protected function buildUserPrompt(): string
+    {
         $payload = $this->payload();
 
-        return [
-            'output'        => $this->fallbackOutput( $payload ),
-            'input_tokens'  => 0,
-            'output_tokens' => 0,
-        ];
+        return "Advise on next steps for the following security incident and return the structured JSON per the schema.\n\n"
+            . 'Incident:' . "\n" . json_encode( $payload['incident'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . "\n\n"
+            . 'Timeline so far:' . "\n" . json_encode( $payload['timeline'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . "\n\n"
+            . 'Matching playbooks:' . "\n" . json_encode( $payload['playbooks'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
     }
 
     /**
@@ -276,20 +315,6 @@ class IncidentResponseAgent extends ArtisanPackAgent
             'description'       => $playbook->description,
             'actions'           => $playbook->getActionNames(),
             'requires_approval' => (bool) $playbook->requires_approval,
-        ];
-    }
-
-    /**
-     * Neutral fallback payload used until laravel/ai wiring lands.
-     *
-     * @param  array{ incident: array<string, mixed>, timeline: array<int, array<string, mixed>>, playbooks: array<int, array<string, mixed>> }  $payload
-     *
-     * @return array<string, mixed>
-     */
-    protected function fallbackOutput( array $payload ): array
-    {
-        return [
-            'suggested_next_actions' => [],
         ];
     }
 }

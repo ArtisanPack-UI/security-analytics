@@ -6,6 +6,7 @@ namespace Tests;
 
 use ArtisanPackUI\Ai\AiServiceProvider;
 use ArtisanPackUI\SecurityAnalytics\SecurityAnalyticsServiceProvider;
+use Laravel\Ai\AiServiceProvider as LaravelAiServiceProvider;
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 
@@ -39,6 +40,7 @@ abstract class TestCase extends BaseTestCase
     {
         return [
             LivewireServiceProvider::class,
+            LaravelAiServiceProvider::class,
             SecurityAnalyticsServiceProvider::class,
             AiServiceProvider::class,
         ];

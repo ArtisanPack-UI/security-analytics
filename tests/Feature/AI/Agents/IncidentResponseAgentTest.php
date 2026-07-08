@@ -22,6 +22,8 @@ beforeEach( function (): void {
         defaultModel: 'claude-opus-4-7',
     ) );
     $resolver->useStore( fn () => null );
+
+    IncidentResponseAgent::fake( [] );
 } );
 
 it( 'declares the security.incident_response feature key and Opus default', function (): void {

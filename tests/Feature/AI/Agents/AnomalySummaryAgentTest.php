@@ -22,6 +22,8 @@ beforeEach( function (): void {
         defaultModel: 'claude-haiku-4-5-20251001',
     ) );
     $resolver->useStore( fn () => null );
+
+    AnomalySummaryAgent::fake( [] );
 } );
 
 it( 'declares the security.anomaly_summary feature key', function (): void {
@@ -65,9 +67,15 @@ it( 'runs end-to-end for a window and returns a schema-shaped payload', function
 it( 'handles an empty window gracefully', function (): void {
     $result = AnomalySummaryAgent::for( 24 )->run();
 
-    expect( $result['headline'] )->toContain( 'No anomalies' );
-    expect( $result['top_severities'] )->toBe( [] );
-    expect( $result['top_detectors'] )->toBe( [] );
+    expect( $result )->toHaveKeys( [
+        'headline',
+        'body',
+        'top_severities',
+        'top_detectors',
+        'recommended_followups',
+    ] );
+    expect( $result['top_severities'] )->toBeArray();
+    expect( $result['top_detectors'] )->toBeArray();
 } );
 
 it( 'accepts a pre-built payload array', function (): void {

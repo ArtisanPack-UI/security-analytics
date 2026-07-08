@@ -24,6 +24,11 @@ beforeEach( function (): void {
         defaultModel: 'claude-sonnet-4-6',
     ) );
     $resolver->useStore( fn () => null );
+
+    // Route every LLM call through laravel/ai's fake gateway; with an
+    // empty response list it auto-generates a schema-conformant payload
+    // so we can assert on shape without paying tokens.
+    ThreatTriageAgent::fake( [] );
 } );
 
 it( 'declares the security.threat_triage feature key', function (): void {

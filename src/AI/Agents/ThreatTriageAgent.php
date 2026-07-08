@@ -17,8 +17,12 @@ namespace ArtisanPackUI\SecurityAnalytics\AI\Agents;
 
 use ArtisanPackUI\Ai\Agents\ArtisanPackAgent;
 use ArtisanPackUI\Ai\Credentials\Credentials;
+use ArtisanPackUI\SecurityAnalytics\AI\Concerns\CallsLaravelAi;
 use ArtisanPackUI\SecurityAnalytics\Models\SecurityEvent;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
 use InvalidArgumentException;
+use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\HasStructuredOutput;
 
 /**
  * Generates a plain-language triage of a security event.
@@ -37,8 +41,10 @@ use InvalidArgumentException;
  *
  * @since      1.1.0
  */
-class ThreatTriageAgent extends ArtisanPackAgent
+class ThreatTriageAgent extends ArtisanPackAgent implements Agent, HasStructuredOutput
 {
+    use CallsLaravelAi;
+
     /**
      * Feature key registered with the AI feature registry.
      *
@@ -140,6 +146,28 @@ class ThreatTriageAgent extends ArtisanPackAgent
     }
 
     /**
+     * Structured-output schema for laravel/ai. Mirrors {@see outputSchema()}
+     * but uses the fluent {@see JsonSchema} builder that the provider layer
+     * expects.
+     *
+     * @return array<string, \Illuminate\JsonSchema\Types\Type>
+     */
+    public function schema( JsonSchema $schema ): array
+    {
+        $action = $schema->object( [
+            'step'    => $schema->string()->required(),
+            'urgency' => $schema->string()->enum( [ 'immediate', 'high', 'medium', 'low' ] )->required(),
+        ] );
+
+        return [
+            'severity'            => $schema->string()->enum( [ 'info', 'low', 'medium', 'high', 'critical' ] )->required(),
+            'summary'             => $schema->string()->required(),
+            'recommended_actions' => $schema->array()->items( $action )->required(),
+            'related_events'      => $schema->array()->items( $schema->integer() )->required(),
+        ];
+    }
+
+    /**
      * Build the LLM input from the raw event, recent-event window, and
      * optional user context.
      *
@@ -160,17 +188,26 @@ class ThreatTriageAgent extends ArtisanPackAgent
      */
     protected function execute( Credentials $credentials, string $model, string $instructions ): array
     {
-        // Concrete provider delegation lands with laravel/ai wiring in a
-        // follow-up. For now the pipeline (feature gate → credential resolve
-        // → cache → dispatch) is exercised against the resolved payload
-        // below, which mirrors what the provider call will consume.
+        return $this->promptStructured(
+            credentials: $credentials,
+            model: $model,
+            userPrompt: $this->buildUserPrompt(),
+        );
+    }
+
+    /**
+     * Assemble the user-role prompt sent alongside the system-role
+     * `instructions()`. The payload is a JSON snapshot of the event, its
+     * related-event window, and any extra context.
+     */
+    protected function buildUserPrompt(): string
+    {
         $payload = $this->payload();
 
-        return [
-            'output'        => $this->fallbackOutput( $payload ),
-            'input_tokens'  => 0,
-            'output_tokens' => 0,
-        ];
+        return "Triage the following security event and return the structured JSON per the schema.\n\n"
+            . 'Event:' . "\n" . json_encode( $payload['event'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . "\n\n"
+            . 'Recent related events:' . "\n" . json_encode( $payload['related'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . "\n\n"
+            . 'Additional context:' . "\n" . json_encode( $payload['context'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
     }
 
     /**
@@ -305,41 +342,5 @@ class ThreatTriageAgent extends ArtisanPackAgent
     protected function serializeRelated( array $events ): array
     {
         return array_map( fn ( SecurityEvent $event ) => $this->serializeEvent( $event ), $events );
-    }
-
-    /**
-     * Neutral fallback used while the provider call is stubbed. Downstream
-     * `execute()` will replace this once laravel/ai wiring lands; keeping it
-     * shape-valid lets the Livewire trigger surface render without failing
-     * schema validation.
-     *
-     * @param  array<string, mixed>  $payload
-     *
-     * @return array<string, mixed>
-     */
-    protected function fallbackOutput( array $payload ): array
-    {
-        $event    = $payload['event'] ?? [];
-        $severity = is_string( $event['severity'] ?? null ) ? $event['severity'] : 'info';
-        $summary  = sprintf(
-            'Threat triage is queued for event %s. Provide API credentials to enable the LLM-backed summary.',
-            (string) ( $event['id'] ?? 'unknown' ),
-        );
-
-        $related = array_values( array_filter( array_map(
-            static fn ( array $item ): ?int => isset( $item['id'] ) && is_numeric( $item['id'] ) ? (int) $item['id'] : null,
-            $payload['related'] ?? [],
-        ) ) );
-
-        return [
-            'severity'            => in_array(
-                $severity,
-                [ 'info', 'low', 'medium', 'high', 'critical' ],
-                true,
-            ) ? $severity : 'info',
-            'summary'             => $summary,
-            'recommended_actions' => [],
-            'related_events'      => $related,
-        ];
     }
 }
