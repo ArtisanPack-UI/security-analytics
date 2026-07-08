@@ -3,7 +3,7 @@
   "description": "Security analytics for Laravel — security event logging, anomaly detection, threat intelligence, SIEM export (Splunk, Datadog, Elasticsearch, syslog), incident response, alerting, and dashboards.",
   "type": "library",
   "license": "MIT",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "keywords": [
     "laravel",
     "security",
@@ -36,9 +36,22 @@
     }
   ],
   "require": {
-    "php": "^8.2",
+    "php": "^8.3",
     "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
+    "artisanpack-ui/ai": "^1.0.0-alpha.1",
     "artisanpack-ui/core": "^1.0"
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "../ai",
+      "options": {
+        "symlink": true
+      }
+    }
+  ],
+  "_comments": {
+    "repositories": "The path repository to ../ai is a development-only convenience for the symlinked workflow used in the dev-app. On a fresh clone without the sibling ai checkout, composer install will fail to resolve artisanpack-ui/ai — that's expected for now; the package's release pipeline pulls it from Packagist via the ^1.0.0-alpha.1 constraint. CI removes this entry before installing."
   },
   "require-dev": {
     "artisanpack-ui/code-style": "^1.1",
@@ -67,7 +80,7 @@
       "dealerdirect/phpcodesniffer-composer-installer": true
     },
     "platform": {
-      "php": "8.2"
+      "php": "8.3"
     }
   },
   "extra": {

@@ -16,6 +16,7 @@ Per-subsystem reference. Each topic is a self-contained surface — you can use 
 - [Alerting](usage/alerting.md) — channels, alert rules, alert history
 - [Reports](usage/reports.md) — on-demand vs scheduled, the 6 report types
 - [Dashboard](usage/dashboard.md) — Livewire UI + JSON API endpoints
+- [AI features](usage/ai-features.md) — threat triage, anomaly digest, incident-response suggestions (new in 1.1)
 - [Artisan commands](usage/artisan-commands.md) — full command reference
 
 ## Quick reference

@@ -31,6 +31,15 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pdo, sqlite, pdo_sqlite
           coverage: none
 
+      - name: Remove dev-only path repository
+        # composer.json declares a `path` repository pointing at ../ai for
+        # the symlinked dev-app workflow. CI has no sibling checkout, so
+        # strip it before `composer install` and let Composer resolve
+        # artisanpack-ui/ai from Packagist via the ^1.0.0-alpha.1 constraint.
+        run: |
+          jq 'del(.repositories, ._comments)' composer.json > composer.json.tmp
+          mv composer.json.tmp composer.json
+
       - name: Get Composer cache directory
         id: composer-cache
         run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
@@ -39,11 +48,14 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.json') }}
           restore-keys: ${{ runner.os }}-composer-
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+        # Use `update` (not `install`) because we just stripped the path
+        # repository from composer.json — the lockfile is now out of sync
+        # with the effective repository set.
+        run: composer update --no-interaction --prefer-dist --optimize-autoloader
 
       - name: Run PHP-CS-Fixer
         run: ./vendor/bin/php-cs-fixer fix --dry-run --diff
@@ -60,12 +72,10 @@ jobs:
       fail-fast: true
       matrix:
         laravel: ['12', '13']
-        php: ['8.2', '8.3', '8.4']
+        # PHP 8.3+ only — bumped from 8.2 in v1.1 because artisanpack-ui/ai
+        # pulls laravel/ai (^0.8), which requires PHP 8.3.
+        php: ['8.3', '8.4']
         livewire: ['3.6', '4.0']
-        exclude:
-          # Laravel 13 requires PHP 8.3+
-          - laravel: '13'
-            php: '8.2'
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -90,11 +100,20 @@ jobs:
           key: ${{ runner.os }}-php${{ matrix.php }}-laravel${{ matrix.laravel }}-lw${{ matrix.livewire }}-composer-${{ hashFiles('**/composer.json') }}
           restore-keys: ${{ runner.os }}-php${{ matrix.php }}-laravel${{ matrix.laravel }}-lw${{ matrix.livewire }}-composer-
 
+      - name: Remove dev-only path repository
+        # composer.json declares a `path` repository pointing at ../ai for
+        # the symlinked dev-app workflow. CI has no sibling checkout, so
+        # strip it before `composer update` and let Composer resolve
+        # artisanpack-ui/ai from Packagist via the ^1.0.0-alpha.1 constraint.
+        run: |
+          jq 'del(.repositories, ._comments)' composer.json > composer.json.tmp
+          mv composer.json.tmp composer.json
+
       - name: Align composer platform PHP with the matrix
-        # The repo's composer.json pins config.platform.php to 8.2 so local
-        # composer.lock stays installable on the lowest supported PHP. In CI we
-        # need composer to resolve against the matrix PHP so the Laravel 13 leg
-        # (PHP 8.3+) can install.
+        # The repo's composer.json pins config.platform.php to 8.3 so local
+        # composer.lock stays installable on the lowest supported PHP. In CI
+        # we align it to the matrix PHP so the Laravel 12 / PHP 8.4 leg (etc.)
+        # resolves against its own target.
         run: composer config platform.php ${{ matrix.php }}
 
       - name: Remove lint-only dev dependencies

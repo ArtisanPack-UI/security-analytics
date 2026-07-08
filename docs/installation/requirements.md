@@ -6,21 +6,25 @@ title: Requirements
 
 ## PHP
 
-- PHP 8.2+
+- PHP 8.3+ (bumped from 8.2 in v1.1.0 to align with `artisanpack-ui/ai`'s transitive `laravel/ai` dependency)
 
 ## Laravel
 
-- Laravel 10 / 11 / 12
-- Laravel 13 (requires PHP 8.3+)
+- Laravel 10 / 11 / 12 / 13
 
 ## Composer dependencies (pulled in automatically)
 
 - `artisanpack-ui/core: ^1.0`
+- `artisanpack-ui/ai: ^1.0.0-alpha.1` — foundation for the three AI features (see [AI features](../usage/ai-features.md))
 
 ## Optional dependencies
 
-- **`livewire/livewire` (^3.6 \| ^4.0)** — only required for the dashboard UI. The rest of the package (logging, detection, SIEM, alerts, jobs, commands) works without Livewire installed.
+- **`livewire/livewire` (^3.6 \| ^4.0)** — required for the dashboard UI **and** the three AI trigger panels (`ThreatTriagePanel`, `AnomalySummaryPanel`, `IncidentResponsePanel`). The rest of the package (logging, detection, SIEM, alerts, jobs, commands) works without Livewire installed.
 - **`pragmarx/google2fa` (^8.0)** — only required if you wire a TwoFactor-related action into a playbook.
+
+## AI provider credentials (per-feature)
+
+The three AI features route through `laravel/ai`'s provider system via `artisanpack-ui/ai`'s credential resolver. Configure once via the AI package's env vars or admin UI; the security-analytics agents pick them up automatically. Anthropic, OpenAI, Gemini, Ollama, and the rest of the `laravel/ai` provider set are all supported — the agents' default models target Anthropic (Opus 4.7 / Sonnet 4.6 / Haiku 4.5) but can be overridden per feature via `artisanpack.ai.features.{key}.model` or the AI Settings admin surface.
 
 ## External services (per-feature)
 
