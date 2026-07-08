@@ -21,6 +21,14 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pdo, sqlite, pdo_sqlite
           coverage: none
 
+      - name: Remove dev-only path repository
+        # composer.json declares a `path` repository pointing at ../ai for
+        # the symlinked dev-app workflow. CI has no sibling checkout, so
+        # strip it and let Composer resolve artisanpack-ui/ai from Packagist.
+        run: |
+          jq 'del(.repositories, ._comments)' composer.json > composer.json.tmp
+          mv composer.json.tmp composer.json
+
       - name: Get Composer cache directory
         id: composer-cache
         run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
@@ -29,11 +37,14 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.json') }}
           restore-keys: ${{ runner.os }}-composer-
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
+        # Use `update` (not `install`) because we just stripped the path
+        # repository from composer.json — the lockfile is now out of sync
+        # with the effective repository set.
+        run: composer update --no-interaction --prefer-dist
 
       - name: Run tests
         env:
