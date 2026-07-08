@@ -60,8 +60,12 @@ use ArtisanPackUI\SecurityAnalytics\Console\Commands\SyncThreatFeedsCommand;
 use ArtisanPackUI\SecurityAnalytics\Console\Commands\TestSiemConnectionCommand;
 use ArtisanPackUI\SecurityAnalytics\Console\Commands\UpdateBehaviorBaselinesCommand;
 use ArtisanPackUI\SecurityAnalytics\Contracts\SecurityEventLoggerInterface;
+use ArtisanPackUI\SecurityAnalytics\Livewire\AnomalySummaryPanel;
+use ArtisanPackUI\SecurityAnalytics\Livewire\IncidentResponsePanel;
+use ArtisanPackUI\SecurityAnalytics\Livewire\ThreatTriagePanel;
 use ArtisanPackUI\SecurityAnalytics\Services\SecurityEventLogger;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
 
 /**
  * Service provider for the Security Analytics package.
@@ -121,6 +125,8 @@ class SecurityAnalyticsServiceProvider extends ServiceProvider
         // routes file itself short-circuits when the dashboard is disabled.
         $this->loadRoutesFrom( __DIR__ . '/../routes/dashboard.php' );
 
+        $this->registerAiLivewireComponents();
+
         if ( $this->app->runningInConsole() ) {
             $this->commands( [
                 AnalyticsProcessCommand::class,
@@ -173,6 +179,28 @@ class SecurityAnalyticsServiceProvider extends ServiceProvider
                 'description' => 'Suggested next steps for an open incident. Advisory only — never triggers actions.',
             ],
         ];
+    }
+
+    /**
+     * Register the three AI trigger Livewire components under short tag
+     * names so consumers can drop them into a Blade view without the full
+     * FQCN. Skipped when livewire/livewire isn't installed.
+     *
+     * @since 1.1.0
+     */
+    protected function registerAiLivewireComponents(): void
+    {
+        // Guard on the concrete container binding — `class_exists()` on the
+        // Livewire facade is true even for unit tests that don't boot the
+        // Livewire provider, and calling `Livewire::component()` in that
+        // window resolves `livewire.finder` and blows up.
+        if ( ! class_exists( Livewire::class ) || ! $this->app->bound( 'livewire' ) ) {
+            return;
+        }
+
+        Livewire::component( 'threat-triage-panel', ThreatTriagePanel::class );
+        Livewire::component( 'anomaly-summary-panel', AnomalySummaryPanel::class );
+        Livewire::component( 'incident-response-panel', IncidentResponsePanel::class );
     }
 
     /**
