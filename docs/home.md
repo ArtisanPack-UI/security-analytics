@@ -18,6 +18,7 @@ This package is part of the **ArtisanPack UI Security 2.0** split.
 - **Alerting** — 8 channel implementations + rule + history models
 - **Reports** — 6 report types, on-demand or scheduled
 - **Dashboard** — controller + 4 Livewire components with shipped Blade views
+- **AI features** *(new in 1.1)* — plain-language threat triage, periodic anomaly digest, advisory-only incident-response suggestions
 
 Everything pluggable can be replaced with a custom implementation by binding your class against the corresponding interface in a service provider.
 

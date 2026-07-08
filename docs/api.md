@@ -35,11 +35,24 @@ The package's public API surface, organized by subsystem.
 
 All contracts are in `src/Analytics/*/Contracts/` (with two exceptions in `src/Contracts/` and `src/Authentication/Contracts/`).
 
+## AI agents *(new in 1.1)*
+
+3 agents under `src/AI/Agents/`, each extending `ArtisanPackUI\Ai\Agents\ArtisanPackAgent` and implementing `Laravel\Ai\Contracts\Agent` + `Laravel\Ai\Contracts\HasStructuredOutput`:
+
+| Class | Feature key | Livewire tag |
+|---|---|---|
+| `ThreatTriageAgent` | `security.threat_triage` | `security-analytics.threat-triage-panel` |
+| `AnomalySummaryAgent` | `security.anomaly_summary` | `security-analytics.anomaly-summary-panel` |
+| `IncidentResponseAgent` | `security.incident_response` | `security-analytics.incident-response-panel` |
+
+Shared wiring lives in the `CallsLaravelAi` trait under `src/AI/Concerns/`. Registered via `SecurityAnalyticsServiceProvider::aiFeatures()` and auto-discovered by `artisanpack-ui/ai`'s boot pass. See [AI features](usage/ai-features.md) for the full usage guide.
+
 ## Events
 
 - `SecurityEventOccurred` — fired after every `security_events` row is written
 - `AnomalyDetected` — fired for every new `Anomaly` row
 - `SuspiciousActivityDetected` — fired by the suspicious activity service
+- `Laravel\Ai\Events\AgentUsageRecorded` (via `artisanpack-ui/ai`) — fired after every AI agent run; subscribe to bill tokens back to a per-tenant budget
 
 ## Jobs
 
