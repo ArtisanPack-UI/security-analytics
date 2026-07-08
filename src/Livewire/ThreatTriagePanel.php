@@ -20,6 +20,9 @@ use ArtisanPackUI\Ai\Exceptions\FeatureDisabledException;
 use ArtisanPackUI\Ai\Exceptions\MissingCredentialsException;
 use ArtisanPackUI\SecurityAnalytics\AI\Agents\ThreatTriageAgent;
 use ArtisanPackUI\SecurityAnalytics\Models\SecurityEvent;
+use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Throwable;
 
@@ -38,8 +41,13 @@ use Throwable;
 class ThreatTriagePanel extends Component
 {
     /**
-     * ID of the {@see SecurityEvent} to triage.
+     * ID of the {@see SecurityEvent} to triage. `#[Locked]` because
+     * Livewire 3 hydrates public properties from the client on every
+     * request; without this, a user with the coarse
+     * `view-security-events` capability could rewire the target to any
+     * event id via the wire protocol.
      */
+    #[Locked]
     public ?int $eventId = null;
 
     /**
@@ -65,10 +73,15 @@ class ThreatTriagePanel extends Component
      */
     public ?string $error = null;
 
+    /**
+     * Mount the component and probe the feature-registry state.
+     *
+     * @since 1.1.0
+     */
     public function mount( ?int $eventId = null ): void
     {
         if ( ! auth()->user()?->can( 'view-security-events' ) ) {
-            abort( 403, 'Unauthorized to view threat triage.' );
+            abort( 403, __( 'Unauthorized to view threat triage.' ) );
         }
 
         $this->eventId = $eventId;
@@ -79,10 +92,15 @@ class ThreatTriagePanel extends Component
         $this->available = $registry->isEnabled( 'security.threat_triage' );
     }
 
+    /**
+     * Run the triage agent against `$this->eventId`.
+     *
+     * @since 1.1.0
+     */
     public function triage(): void
     {
         if ( ! auth()->user()?->can( 'view-security-events' ) ) {
-            abort( 403, 'Unauthorized to trigger threat triage.' );
+            abort( 403, __( 'Unauthorized to trigger threat triage.' ) );
         }
 
         $this->result = null;
@@ -104,11 +122,25 @@ class ThreatTriagePanel extends Component
             $this->available = false;
             $this->error     = __( 'AI credentials are not configured for threat triage.' );
         } catch ( Throwable $e ) {
-            $this->error = __( 'Threat triage failed: :message', [ 'message' => $e->getMessage() ] );
+            // Log the raw exception (which may contain the upstream URL or
+            // even API-key headers) server-side; surface a redacted generic
+            // message in the browser DOM.
+            Log::error( 'ThreatTriageAgent invocation failed', [
+                'event_id' => $this->eventId,
+                'error'    => $e->getMessage(),
+                'class'    => $e::class,
+            ] );
+
+            $this->error = __( 'Threat triage failed. Check the server logs for details.' );
         }
     }
 
-    public function render()
+    /**
+     * Render the panel view.
+     *
+     * @since 1.1.0
+     */
+    public function render(): View
     {
         return view( 'security-analytics::livewire.threat-triage-panel' );
     }

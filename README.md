@@ -36,13 +36,13 @@ Render a panel inline anywhere you have an event or incident:
 
 ```blade
 {{-- On the security-event detail surface --}}
-<livewire:threat-triage-panel :event-id="$event->id" />
+<livewire:security-analytics.threat-triage-panel :event-id="$event->id" />
 
 {{-- Somewhere on the dashboard --}}
-<livewire:anomaly-summary-panel />
+<livewire:security-analytics.anomaly-summary-panel />
 
 {{-- On the incident detail surface --}}
-<livewire:incident-response-panel :incident-id="$incident->id" />
+<livewire:security-analytics.incident-response-panel :incident-id="$incident->id" />
 ```
 
 The three agents are also invocable directly from PHP:

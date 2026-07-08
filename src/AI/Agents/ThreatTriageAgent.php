@@ -85,8 +85,45 @@ class ThreatTriageAgent extends ArtisanPackAgent implements Agent, HasStructured
 
     /**
      * System prompt describing the triage task.
+     *
+     * Layered precedence: the base pipeline computes a resolved instructions
+     * string (settings-store override → config override → class default) and
+     * hands it to `execute()`, which stashes it on the trait's
+     * `$currentInstructions` for the duration of the run. `laravel/ai` reads
+     * `instructions()` directly off the agent, so this method must consult
+     * the runtime override first.
      */
     public function instructions(): string
+    {
+        return $this->currentInstructions ?? $this->defaultInstructions();
+    }
+
+    /**
+     * Structured-output schema for laravel/ai. Single source of truth — the
+     * trait derives {@see outputSchema()} from this via `ObjectSchema`.
+     *
+     * @return array<string, \Illuminate\JsonSchema\Types\Type>
+     */
+    public function schema( JsonSchema $schema ): array
+    {
+        $action = $schema->object( [
+            'step'    => $schema->string()->required(),
+            'urgency' => $schema->string()->enum( [ 'immediate', 'high', 'medium', 'low' ] )->required(),
+        ] );
+
+        return [
+            'severity'            => $schema->string()->enum( [ 'info', 'low', 'medium', 'high', 'critical' ] )->required(),
+            'summary'             => $schema->string()->required(),
+            'recommended_actions' => $schema->array()->items( $action )->required(),
+            'related_events'      => $schema->array()->items( $schema->integer() )->required(),
+        ];
+    }
+
+    /**
+     * Class-default system prompt. Consumers override via the AI Settings
+     * admin UI or `artisanpack.ai.features.security.threat_triage.instructions`.
+     */
+    protected function defaultInstructions(): string
     {
         return <<<'PROMPT'
             You are a senior on-call security responder. You are given a
@@ -104,67 +141,6 @@ class ThreatTriageAgent extends ArtisanPackAgent implements Agent, HasStructured
                 related context. Do not invent event ids.
               - You never trigger actions. Your output is advisory only.
             PROMPT;
-    }
-
-    /**
-     * Structured output schema. The base pipeline validates the LLM response
-     * against this shape before returning.
-     *
-     * @return array<string, mixed>
-     */
-    public function outputSchema(): array
-    {
-        return [
-            'type'       => 'object',
-            'properties' => [
-                'severity' => [
-                    'type' => 'string',
-                    'enum' => [ 'info', 'low', 'medium', 'high', 'critical' ],
-                ],
-                'summary'             => [ 'type' => 'string' ],
-                'recommended_actions' => [
-                    'type'  => 'array',
-                    'items' => [
-                        'type'       => 'object',
-                        'properties' => [
-                            'step'    => [ 'type' => 'string' ],
-                            'urgency' => [
-                                'type' => 'string',
-                                'enum' => [ 'immediate', 'high', 'medium', 'low' ],
-                            ],
-                        ],
-                        'required' => [ 'step', 'urgency' ],
-                    ],
-                ],
-                'related_events' => [
-                    'type'  => 'array',
-                    'items' => [ 'type' => 'integer' ],
-                ],
-            ],
-            'required' => [ 'severity', 'summary', 'recommended_actions', 'related_events' ],
-        ];
-    }
-
-    /**
-     * Structured-output schema for laravel/ai. Mirrors {@see outputSchema()}
-     * but uses the fluent {@see JsonSchema} builder that the provider layer
-     * expects.
-     *
-     * @return array<string, \Illuminate\JsonSchema\Types\Type>
-     */
-    public function schema( JsonSchema $schema ): array
-    {
-        $action = $schema->object( [
-            'step'    => $schema->string()->required(),
-            'urgency' => $schema->string()->enum( [ 'immediate', 'high', 'medium', 'low' ] )->required(),
-        ] );
-
-        return [
-            'severity'            => $schema->string()->enum( [ 'info', 'low', 'medium', 'high', 'critical' ] )->required(),
-            'summary'             => $schema->string()->required(),
-            'recommended_actions' => $schema->array()->items( $action )->required(),
-            'related_events'      => $schema->array()->items( $schema->integer() )->required(),
-        ];
     }
 
     /**
@@ -191,6 +167,7 @@ class ThreatTriageAgent extends ArtisanPackAgent implements Agent, HasStructured
         return $this->promptStructured(
             credentials: $credentials,
             model: $model,
+            instructions: $instructions,
             userPrompt: $this->buildUserPrompt(),
         );
     }
@@ -217,12 +194,19 @@ class ThreatTriageAgent extends ArtisanPackAgent implements Agent, HasStructured
      */
     protected function cacheFingerprint(): string
     {
-        $payload = $this->payload();
-
-        return 'threat-triage:' . hash(
-            'sha256',
-            json_encode( $payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ),
+        $encoded = json_encode(
+            $this->payload(),
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE,
         );
+
+        // Under strict types, hash() rejects a false return. Fall through
+        // to a deterministic marker so an unencodable payload doesn't crash
+        // the base pipeline before execute() runs.
+        if ( false === $encoded ) {
+            $encoded = 'threat-triage:unencodable-payload';
+        }
+
+        return 'threat-triage:' . hash( 'sha256', $encoded );
     }
 
     /**
@@ -291,6 +275,18 @@ class ThreatTriageAgent extends ArtisanPackAgent implements Agent, HasStructured
      */
     protected function fetchRelated( SecurityEvent $event ): array
     {
+        // Empty closure-wheres are a no-op in Eloquent, which would return
+        // arbitrary recent events across all tenants/users and leak their
+        // PII into the LLM prompt. Skip the query entirely when we have no
+        // correlation keys to filter on.
+        if (
+            null === $event->fingerprint
+            && null === $event->ip_address
+            && null === $event->user_id
+        ) {
+            return [];
+        }
+
         return SecurityEvent::query()
             ->where( 'id', '!=', $event->id )
             ->where( function ( $query ) use ( $event ): void {

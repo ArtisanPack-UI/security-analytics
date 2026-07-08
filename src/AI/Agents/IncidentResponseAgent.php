@@ -83,8 +83,40 @@ class IncidentResponseAgent extends ArtisanPackAgent implements Agent, HasStruct
 
     /**
      * System prompt describing the incident-response task.
+     *
+     * See {@see ThreatTriageAgent::instructions()} for the layered-override
+     * plumbing. `laravel/ai` reads `instructions()` directly off the agent,
+     * so this method must consult the runtime override first.
      */
     public function instructions(): string
+    {
+        return $this->currentInstructions ?? $this->defaultInstructions();
+    }
+
+    /**
+     * Structured-output schema for laravel/ai. Single source of truth — the
+     * trait derives {@see outputSchema()} from this via `ObjectSchema`.
+     *
+     * @return array<string, \Illuminate\JsonSchema\Types\Type>
+     */
+    public function schema( JsonSchema $schema ): array
+    {
+        $suggestion = $schema->object( [
+            'step'      => $schema->string()->required(),
+            'rationale' => $schema->string()->required(),
+            'risk'      => $schema->string()->enum( [ 'low', 'medium', 'high' ] )->required(),
+        ] );
+
+        return [
+            'suggested_next_actions' => $schema->array()->items( $suggestion )->required(),
+        ];
+    }
+
+    /**
+     * Class-default system prompt. Consumers override via the AI Settings
+     * admin UI or `artisanpack.ai.features.security.incident_response.instructions`.
+     */
+    protected function defaultInstructions(): string
     {
         return <<<'PROMPT'
             You are advising an incident responder on next steps for an open
@@ -111,54 +143,6 @@ class IncidentResponseAgent extends ArtisanPackAgent implements Agent, HasStruct
     }
 
     /**
-     * @return array<string, mixed>
-     */
-    public function outputSchema(): array
-    {
-        return [
-            'type'       => 'object',
-            'properties' => [
-                'suggested_next_actions' => [
-                    'type'  => 'array',
-                    'items' => [
-                        'type'       => 'object',
-                        'properties' => [
-                            'step'      => [ 'type' => 'string' ],
-                            'rationale' => [ 'type' => 'string' ],
-                            'risk'      => [
-                                'type' => 'string',
-                                'enum' => [ 'low', 'medium', 'high' ],
-                            ],
-                        ],
-                        'required' => [ 'step', 'rationale', 'risk' ],
-                    ],
-                ],
-            ],
-            'required' => [ 'suggested_next_actions' ],
-        ];
-    }
-
-    /**
-     * Structured-output schema for laravel/ai. Mirrors {@see outputSchema()}
-     * but uses the fluent {@see JsonSchema} builder that the provider layer
-     * expects.
-     *
-     * @return array<string, \Illuminate\JsonSchema\Types\Type>
-     */
-    public function schema( JsonSchema $schema ): array
-    {
-        $suggestion = $schema->object( [
-            'step'      => $schema->string()->required(),
-            'rationale' => $schema->string()->required(),
-            'risk'      => $schema->string()->enum( [ 'low', 'medium', 'high' ] )->required(),
-        ] );
-
-        return [
-            'suggested_next_actions' => $schema->array()->items( $suggestion )->required(),
-        ];
-    }
-
-    /**
      * Build the LLM input from incident state, timeline, and playbooks.
      *
      * Input shape:
@@ -178,6 +162,7 @@ class IncidentResponseAgent extends ArtisanPackAgent implements Agent, HasStruct
         return $this->promptStructured(
             credentials: $credentials,
             model: $model,
+            instructions: $instructions,
             userPrompt: $this->buildUserPrompt(),
         );
     }
@@ -198,18 +183,30 @@ class IncidentResponseAgent extends ArtisanPackAgent implements Agent, HasStruct
     }
 
     /**
-     * Fingerprint that includes the incident's updated_at so re-running the
-     * agent after new timeline entries invalidates the cache.
+     * Fingerprint that hashes the timeline contents (not just the count) so
+     * a same-length edit — replacing an action, reordering, or a bulk
+     * update that skips `updated_at` — properly invalidates the cache.
      */
     protected function cacheFingerprint(): string
     {
         $payload = $this->payload();
 
-        return 'incident-response:' . hash( 'sha256', json_encode( [
-            'incident_id'    => $payload['incident']['id'] ?? null,
-            'timeline_count' => count( $payload['timeline'] ?? [] ),
-            'updated_at'     => $payload['incident']['updated_at'] ?? null,
-        ] ) );
+        $encoded = json_encode(
+            [
+                'incident_id' => $payload['incident']['id'] ?? null,
+                'severity'    => $payload['incident']['severity'] ?? null,
+                'status'      => $payload['incident']['status'] ?? null,
+                'updated_at'  => $payload['incident']['updated_at'] ?? null,
+                'timeline'    => $payload['timeline'] ?? [],
+            ],
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE,
+        );
+
+        if ( false === $encoded ) {
+            $encoded = 'incident-response:unencodable-payload';
+        }
+
+        return 'incident-response:' . hash( 'sha256', $encoded );
     }
 
     /**

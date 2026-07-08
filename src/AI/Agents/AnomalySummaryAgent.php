@@ -75,19 +75,61 @@ class AnomalySummaryAgent extends ArtisanPackAgent implements Agent, HasStructur
     public string $defaultModel = 'claude-haiku-4-5-20251001';
 
     /**
-     * Streaming on by default — digests are longer than triage output and
-     * responders appreciate incremental rendering in the email preview.
+     * Streaming off. The trait's `promptStructured()` uses the non-streaming
+     * `prompt()` path and emits the assembled payload in one shot; when a
+     * streaming path lands (`stream()` on the trait), flip this back to `true`
+     * and route `execute()` through the streaming call.
      *
      * @since 1.1.0
      *
      * @var bool
      */
-    public bool $stream = true;
+    public bool $stream = false;
 
     /**
      * System prompt describing the digest task.
+     *
+     * See {@see ThreatTriageAgent::instructions()} for the layered-override
+     * plumbing. `laravel/ai` reads `instructions()` directly off the agent,
+     * so this method must consult the runtime override first.
      */
     public function instructions(): string
+    {
+        return $this->currentInstructions ?? $this->defaultInstructions();
+    }
+
+    /**
+     * Structured-output schema for laravel/ai. Single source of truth — the
+     * trait derives {@see outputSchema()} from this via `ObjectSchema`.
+     *
+     * @return array<string, \Illuminate\JsonSchema\Types\Type>
+     */
+    public function schema( JsonSchema $schema ): array
+    {
+        $severityBucket = $schema->object( [
+            'severity' => $schema->string()->enum( [ 'info', 'low', 'medium', 'high', 'critical' ] )->required(),
+            'count'    => $schema->integer()->required(),
+        ] );
+
+        $detectorBucket = $schema->object( [
+            'detector' => $schema->string()->required(),
+            'count'    => $schema->integer()->required(),
+        ] );
+
+        return [
+            'headline'              => $schema->string()->required(),
+            'body'                  => $schema->string()->required(),
+            'top_severities'        => $schema->array()->items( $severityBucket )->required(),
+            'top_detectors'         => $schema->array()->items( $detectorBucket )->required(),
+            'recommended_followups' => $schema->array()->items( $schema->string() )->required(),
+        ];
+    }
+
+    /**
+     * Class-default system prompt. Consumers override via the AI Settings
+     * admin UI or `artisanpack.ai.features.security.anomaly_summary.instructions`.
+     */
+    protected function defaultInstructions(): string
     {
         return <<<'PROMPT'
             You are writing a periodic security digest for a stakeholder who
@@ -114,78 +156,6 @@ class AnomalySummaryAgent extends ArtisanPackAgent implements Agent, HasStructur
     }
 
     /**
-     * @return array<string, mixed>
-     */
-    public function outputSchema(): array
-    {
-        return [
-            'type'       => 'object',
-            'properties' => [
-                'headline'       => [ 'type' => 'string' ],
-                'body'           => [ 'type' => 'string' ],
-                'top_severities' => [
-                    'type'  => 'array',
-                    'items' => [
-                        'type'       => 'object',
-                        'properties' => [
-                            'severity' => [
-                                'type' => 'string',
-                                'enum' => [ 'info', 'low', 'medium', 'high', 'critical' ],
-                            ],
-                            'count' => [ 'type' => 'integer' ],
-                        ],
-                        'required' => [ 'severity', 'count' ],
-                    ],
-                ],
-                'top_detectors' => [
-                    'type'  => 'array',
-                    'items' => [
-                        'type'       => 'object',
-                        'properties' => [
-                            'detector' => [ 'type' => 'string' ],
-                            'count'    => [ 'type' => 'integer' ],
-                        ],
-                        'required' => [ 'detector', 'count' ],
-                    ],
-                ],
-                'recommended_followups' => [
-                    'type'  => 'array',
-                    'items' => [ 'type' => 'string' ],
-                ],
-            ],
-            'required' => [ 'headline', 'body', 'top_severities', 'top_detectors', 'recommended_followups' ],
-        ];
-    }
-
-    /**
-     * Structured-output schema for laravel/ai. Mirrors {@see outputSchema()}
-     * but uses the fluent {@see JsonSchema} builder that the provider layer
-     * expects.
-     *
-     * @return array<string, \Illuminate\JsonSchema\Types\Type>
-     */
-    public function schema( JsonSchema $schema ): array
-    {
-        $severityBucket = $schema->object( [
-            'severity' => $schema->string()->enum( [ 'info', 'low', 'medium', 'high', 'critical' ] )->required(),
-            'count'    => $schema->integer()->required(),
-        ] );
-
-        $detectorBucket = $schema->object( [
-            'detector' => $schema->string()->required(),
-            'count'    => $schema->integer()->required(),
-        ] );
-
-        return [
-            'headline'              => $schema->string()->required(),
-            'body'                  => $schema->string()->required(),
-            'top_severities'        => $schema->array()->items( $severityBucket )->required(),
-            'top_detectors'         => $schema->array()->items( $detectorBucket )->required(),
-            'recommended_followups' => $schema->array()->items( $schema->string() )->required(),
-        ];
-    }
-
-    /**
      * Call the provider with the digest payload.
      *
      * Input shape:
@@ -205,6 +175,7 @@ class AnomalySummaryAgent extends ArtisanPackAgent implements Agent, HasStructur
         return $this->promptStructured(
             credentials: $credentials,
             model: $model,
+            instructions: $instructions,
             userPrompt: $this->buildUserPrompt(),
         );
     }
@@ -225,24 +196,38 @@ class AnomalySummaryAgent extends ArtisanPackAgent implements Agent, HasStructur
     }
 
     /**
-     * Digest fingerprint keyed by window + anomaly ids so a re-run with the
-     * same data hits cache.
+     * Digest fingerprint keyed by window + per-anomaly (id, severity,
+     * detector) tuples so a reclassification (severity or detector edit)
+     * invalidates the cache even when the id set hasn't changed.
      */
     protected function cacheFingerprint(): string
     {
         $payload = $this->payload();
 
-        $anomalyIds = array_values( array_filter( array_map(
-            static fn ( $item ) => is_array( $item ) && isset( $item['id'] ) ? (int) $item['id'] : null,
+        $anomalies = array_values( array_filter( array_map(
+            static fn ( $item ) => is_array( $item ) && isset( $item['id'] ) ? [
+                (int) $item['id'],
+                (string) ( $item['severity'] ?? '' ),
+                (string) ( $item['detector'] ?? '' ),
+            ] : null,
             $payload['anomalies'] ?? [],
         ) ) );
 
-        sort( $anomalyIds );
+        usort( $anomalies, static fn ( array $a, array $b ) => $a[0] <=> $b[0] );
 
-        return 'anomaly-summary:' . hash( 'sha256', json_encode( [
-            'window'    => $payload['window_hours'] ?? 24,
-            'anomalies' => $anomalyIds,
-        ] ) );
+        $encoded = json_encode(
+            [
+                'window'    => $payload['window_hours'] ?? 24,
+                'anomalies' => $anomalies,
+            ],
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE,
+        );
+
+        if ( false === $encoded ) {
+            $encoded = 'anomaly-summary:unencodable-payload';
+        }
+
+        return 'anomaly-summary:' . hash( 'sha256', $encoded );
     }
 
     /**
@@ -265,10 +250,19 @@ class AnomalySummaryAgent extends ArtisanPackAgent implements Agent, HasStructur
                 );
             }
 
+            $anomalies  = $input['anomalies'] ?? $this->fetchAnomalies( $window );
+            $statistics = $input['statistics'] ?? $this->buildStatistics( $window );
+
+            if ( ! is_array( $anomalies ) || ! is_array( $statistics ) ) {
+                throw new InvalidArgumentException(
+                    'AnomalySummaryAgent: `anomalies` and `statistics` must be arrays when provided.',
+                );
+            }
+
             return [
                 'window_hours' => $window,
-                'anomalies'    => array_values( $input['anomalies'] ?? $this->fetchAnomalies( $window ) ),
-                'statistics'   => $input['statistics'] ?? $this->buildStatistics( $window ),
+                'anomalies'    => array_values( $anomalies ),
+                'statistics'   => $statistics,
             ];
         }
 
@@ -313,22 +307,40 @@ class AnomalySummaryAgent extends ArtisanPackAgent implements Agent, HasStructur
     }
 
     /**
+     * Aggregate anomaly counts for the digest window entirely in the DB —
+     * `Anomaly::query()->get()->groupBy(...)` would hydrate every row into
+     * memory just to bucket-count it, which is unbounded on busy tenants.
+     *
      * @return array<string, mixed>
      */
     protected function buildStatistics( int $hours ): array
     {
-        $anomalies = Anomaly::query()
-            ->where( 'detected_at', '>=', now()->subHours( $hours ) )
-            ->get();
+        $since = now()->subHours( $hours );
 
-        $bySeverity = $anomalies->groupBy( 'severity' )->map->count()->toArray();
-        $byDetector = $anomalies->groupBy( 'detector' )->map->count()->toArray();
+        $bySeverity = Anomaly::query()
+            ->where( 'detected_at', '>=', $since )
+            ->selectRaw( 'severity, COUNT(*) as bucket_count' )
+            ->groupBy( 'severity' )
+            ->orderByDesc( 'bucket_count' )
+            ->pluck( 'bucket_count', 'severity' )
+            ->map( static fn ( $count ): int => (int) $count )
+            ->all();
 
-        arsort( $bySeverity );
-        arsort( $byDetector );
+        $byDetector = Anomaly::query()
+            ->where( 'detected_at', '>=', $since )
+            ->selectRaw( 'detector, COUNT(*) as bucket_count' )
+            ->groupBy( 'detector' )
+            ->orderByDesc( 'bucket_count' )
+            ->pluck( 'bucket_count', 'detector' )
+            ->map( static fn ( $count ): int => (int) $count )
+            ->all();
+
+        $totalCount = (int) Anomaly::query()
+            ->where( 'detected_at', '>=', $since )
+            ->count();
 
         return [
-            'total_count' => $anomalies->count(),
+            'total_count' => $totalCount,
             'by_severity' => $bySeverity,
             'by_detector' => $byDetector,
         ];

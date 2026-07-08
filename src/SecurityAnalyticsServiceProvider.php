@@ -163,20 +163,20 @@ class SecurityAnalyticsServiceProvider extends ServiceProvider
             'security.threat_triage' => [
                 'agent'       => ThreatTriageAgent::class,
                 'package'     => 'artisanpack-ui/security-analytics',
-                'label'       => 'Threat triage',
-                'description' => 'Plain-language severity and recommended actions for a security event.',
+                'label'       => __( 'Threat triage' ),
+                'description' => __( 'Plain-language severity and recommended actions for a security event.' ),
             ],
             'security.anomaly_summary' => [
                 'agent'       => AnomalySummaryAgent::class,
                 'package'     => 'artisanpack-ui/security-analytics',
-                'label'       => 'Anomaly summary',
-                'description' => 'Periodic digest of unusual security events for out-of-band stakeholders.',
+                'label'       => __( 'Anomaly summary' ),
+                'description' => __( 'Periodic digest of unusual security events for out-of-band stakeholders.' ),
             ],
             'security.incident_response' => [
                 'agent'       => IncidentResponseAgent::class,
                 'package'     => 'artisanpack-ui/security-analytics',
-                'label'       => 'Incident response',
-                'description' => 'Suggested next steps for an open incident. Advisory only — never triggers actions.',
+                'label'       => __( 'Incident response' ),
+                'description' => __( 'Suggested next steps for an open incident. Advisory only — never triggers actions.' ),
             ],
         ];
     }
@@ -198,9 +198,9 @@ class SecurityAnalyticsServiceProvider extends ServiceProvider
             return;
         }
 
-        Livewire::component( 'threat-triage-panel', ThreatTriagePanel::class );
-        Livewire::component( 'anomaly-summary-panel', AnomalySummaryPanel::class );
-        Livewire::component( 'incident-response-panel', IncidentResponsePanel::class );
+        Livewire::component( 'security-analytics.threat-triage-panel', ThreatTriagePanel::class );
+        Livewire::component( 'security-analytics.anomaly-summary-panel', AnomalySummaryPanel::class );
+        Livewire::component( 'security-analytics.incident-response-panel', IncidentResponsePanel::class );
     }
 
     /**

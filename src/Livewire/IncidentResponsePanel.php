@@ -20,6 +20,9 @@ use ArtisanPackUI\Ai\Exceptions\FeatureDisabledException;
 use ArtisanPackUI\Ai\Exceptions\MissingCredentialsException;
 use ArtisanPackUI\SecurityAnalytics\AI\Agents\IncidentResponseAgent;
 use ArtisanPackUI\SecurityAnalytics\Models\SecurityIncident;
+use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Throwable;
 
@@ -38,8 +41,13 @@ use Throwable;
 class IncidentResponsePanel extends Component
 {
     /**
-     * ID of the {@see SecurityIncident} to advise on.
+     * ID of the {@see SecurityIncident} to advise on. `#[Locked]` because
+     * Livewire 3 hydrates public properties from the client on every
+     * request; without this, a user with the coarse
+     * `view-security-events` capability could rewire the target to any
+     * incident id via the wire protocol.
      */
+    #[Locked]
     public ?int $incidentId = null;
 
     /**
@@ -64,10 +72,15 @@ class IncidentResponsePanel extends Component
      */
     public ?string $error = null;
 
+    /**
+     * Mount the panel and probe the feature-registry state.
+     *
+     * @since 1.1.0
+     */
     public function mount( ?int $incidentId = null ): void
     {
         if ( ! auth()->user()?->can( 'view-security-events' ) ) {
-            abort( 403, 'Unauthorized to view incident response suggestions.' );
+            abort( 403, __( 'Unauthorized to view incident response suggestions.' ) );
         }
 
         $this->incidentId = $incidentId;
@@ -78,10 +91,15 @@ class IncidentResponsePanel extends Component
         $this->available = $registry->isEnabled( 'security.incident_response' );
     }
 
+    /**
+     * Run the incident-response agent against `$this->incidentId`.
+     *
+     * @since 1.1.0
+     */
     public function suggest(): void
     {
         if ( ! auth()->user()?->can( 'view-security-events' ) ) {
-            abort( 403, 'Unauthorized to trigger incident response suggestions.' );
+            abort( 403, __( 'Unauthorized to trigger incident response suggestions.' ) );
         }
 
         $this->result = null;
@@ -103,11 +121,25 @@ class IncidentResponsePanel extends Component
             $this->available = false;
             $this->error     = __( 'AI credentials are not configured for incident response.' );
         } catch ( Throwable $e ) {
-            $this->error = __( 'Incident response suggestions failed: :message', [ 'message' => $e->getMessage() ] );
+            // Log the raw exception (which may contain the upstream URL or
+            // even API-key headers) server-side; surface a redacted generic
+            // message in the browser DOM.
+            Log::error( 'IncidentResponseAgent invocation failed', [
+                'incident_id' => $this->incidentId,
+                'error'       => $e->getMessage(),
+                'class'       => $e::class,
+            ] );
+
+            $this->error = __( 'Incident response suggestions failed. Check the server logs for details.' );
         }
     }
 
-    public function render()
+    /**
+     * Render the panel view.
+     *
+     * @since 1.1.0
+     */
+    public function render(): View
     {
         return view( 'security-analytics::livewire.incident-response-panel' );
     }

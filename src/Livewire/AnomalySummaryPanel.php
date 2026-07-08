@@ -19,6 +19,8 @@ use ArtisanPackUI\Ai\Contracts\FeatureRegistry;
 use ArtisanPackUI\Ai\Exceptions\FeatureDisabledException;
 use ArtisanPackUI\Ai\Exceptions\MissingCredentialsException;
 use ArtisanPackUI\SecurityAnalytics\AI\Agents\AnomalySummaryAgent;
+use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Throwable;
 
@@ -28,6 +30,9 @@ use Throwable;
  * Rendered on the security dashboard. The user picks a window (in hours),
  * clicks generate, and gets back a scannable digest. Disabled when the
  * `security.anomaly_summary` feature is off or credentials are missing.
+ *
+ * `$windowHours` is intentionally client-writable (the input field binds
+ * to it) but bounded by the `generate()` action to `[1, 720]`.
  *
  * @package    ArtisanPack_UI
  * @subpackage SecurityAnalytics
@@ -63,10 +68,15 @@ class AnomalySummaryPanel extends Component
      */
     public ?string $error = null;
 
+    /**
+     * Mount the panel and probe the feature-registry state.
+     *
+     * @since 1.1.0
+     */
     public function mount(): void
     {
         if ( ! auth()->user()?->can( 'view-security-dashboard' ) ) {
-            abort( 403, 'Unauthorized to view anomaly summary.' );
+            abort( 403, __( 'Unauthorized to view anomaly summary.' ) );
         }
 
         $registry = app( FeatureRegistry::class );
@@ -75,10 +85,15 @@ class AnomalySummaryPanel extends Component
         $this->available = $registry->isEnabled( 'security.anomaly_summary' );
     }
 
+    /**
+     * Generate the digest for the current window.
+     *
+     * @since 1.1.0
+     */
     public function generate(): void
     {
         if ( ! auth()->user()?->can( 'view-security-dashboard' ) ) {
-            abort( 403, 'Unauthorized to generate anomaly summary.' );
+            abort( 403, __( 'Unauthorized to generate anomaly summary.' ) );
         }
 
         $this->result = null;
@@ -100,11 +115,25 @@ class AnomalySummaryPanel extends Component
             $this->available = false;
             $this->error     = __( 'AI credentials are not configured for anomaly summary.' );
         } catch ( Throwable $e ) {
-            $this->error = __( 'Anomaly summary failed: :message', [ 'message' => $e->getMessage() ] );
+            // Log the raw exception (which may contain the upstream URL or
+            // even API-key headers) server-side; surface a redacted generic
+            // message in the browser DOM.
+            Log::error( 'AnomalySummaryAgent invocation failed', [
+                'window_hours' => $this->windowHours,
+                'error'        => $e->getMessage(),
+                'class'        => $e::class,
+            ] );
+
+            $this->error = __( 'Anomaly summary failed. Check the server logs for details.' );
         }
     }
 
-    public function render()
+    /**
+     * Render the panel view.
+     *
+     * @since 1.1.0
+     */
+    public function render(): View
     {
         return view( 'security-analytics::livewire.anomaly-summary-panel' );
     }
