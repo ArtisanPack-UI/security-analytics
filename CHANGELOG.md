@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-02
+
+### Added
+
+- `scheduled_reports` migration (`2025_01_01_000009_create_scheduled_reports_table`). The `ScheduledReport` model shipped in a previous release without a backing migration, so recurring report scheduling failed with `no such table: scheduled_reports` on a fresh install. Closes #11.
+
+### Changed
+
+- Every analytics migration is now guarded with `Schema::hasTable()` before `Schema::create()`, making the full migration set idempotent. This lets `security-analytics` coexist with `security-advanced-auth` (both ship an identical `suspicious_activities` table from the extraction) without a manual skip step, and makes re-running the migrations safe. The `suspicious_activities` migration additionally resolves the host's user model only inside the guard, so the model is never instantiated when the table already exists. Closes #10.
+
+### Fixed
+
+- Dropped the advertised but non-functional Laravel 10 support. The models declare casts with the `casts()` method, which Laravel 11 introduced — on Laravel 10 that declaration overrode nothing, so every `array`, `datetime`, and enum cast silently returned the raw column value. The `illuminate/support` constraint is narrowed to `^11.0|^12.0|^13.0` to match what the code actually requires. Closes #25.
+
 ## [1.1.0] - 2026-07-07
 
 ### Added
