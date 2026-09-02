@@ -27,14 +27,15 @@ class SecurityMetricModelTest extends AnalyticsTestCase
     public function test_it_casts_attributes(): void
     {
         $metric = SecurityMetric::factory()->create( [
+            'value'       => 12.3456789,
             'tags'        => ['environment' => 'production'],
             'recorded_at' => now(),
         ] );
 
         $this->assertIsArray( $metric->tags );
         $this->assertInstanceOf( \Carbon\Carbon::class, $metric->recorded_at );
-        // Decimal cast returns a string representation with fixed precision.
-        $this->assertEqualsWithDelta( (float) $metric->value, (float) $metric->fresh()->value, 0.0000001 );
+        // Decimal cast returns a string representation with fixed six-decimal precision.
+        $this->assertSame( '12.345679', $metric->fresh()->value );
     }
 
     public function test_it_gets_tag_values(): void

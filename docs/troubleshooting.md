@@ -68,11 +68,13 @@ uses( RefreshDatabase::class );
 
 The package's migrations run automatically when `RefreshDatabase` (or `DatabaseMigrations`) is in use.
 
-## Migration `2025_12_24_000008_create_suspicious_activities_table` conflicts with `security-auth`
+## Migration `2025_12_24_000008_create_suspicious_activities_table` conflicts with `security-advanced-auth`
 
 Both `security-analytics` and `security-advanced-auth` shipped a `suspicious_activities` migration during the extraction. They're the same table.
 
-As of 1.2.0 every `security-analytics` migration is guarded with `Schema::hasTable()`, so whichever package runs its migration first wins and the other is skipped automatically — no manual intervention needed ([#10](https://github.com/ArtisanPack-UI/security-analytics/issues/10)). If you're on an earlier version, skip one of the two migrations manually or upgrade to 1.2.0.
+As of 1.2.0 every `security-analytics` migration is guarded with `Schema::hasTable()`, so on `php artisan migrate` whichever package runs its migration first creates the table and the other is skipped automatically — no manual intervention needed for installation ([#10](https://github.com/ArtisanPack-UI/security-analytics/issues/10)). If you're on an earlier version, skip one of the two migrations manually or upgrade to 1.2.0.
+
+> **Rollback caveat when both packages are installed.** Laravel still records a guarded migration as *applied* even when its `up()` skipped creation, so `php artisan migrate:rollback` will call that migration's `down()`, which drops `suspicious_activities`. If `security-advanced-auth` created the table and you roll back `security-analytics` (or vice versa), the shared table — and its data — is removed even though the other package still relies on it. When both packages are installed, roll back with care: target specific batches, or re-run the surviving package's migration afterward to recreate the table.
 
 ## Still stuck?
 

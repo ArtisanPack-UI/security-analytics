@@ -134,10 +134,18 @@ class ThreatIndicatorModelTest extends AnalyticsTestCase
             'expires_at' => now()->addWeek(),
         ] );
 
+        // A second active IP indicator ensures findActive() filters on value, not just type.
+        ThreatIndicator::factory()->create( [
+            'type'       => ThreatIndicator::TYPE_IP,
+            'value'      => '203.0.113.4',
+            'expires_at' => now()->addWeek(),
+        ] );
+
         $found   = ThreatIndicator::findActive( ThreatIndicator::TYPE_IP, '203.0.113.5' );
         $missing = ThreatIndicator::findActive( ThreatIndicator::TYPE_IP, '203.0.113.99' );
 
         $this->assertInstanceOf( ThreatIndicator::class, $found );
+        $this->assertSame( '203.0.113.5', $found->value );
         $this->assertNull( $missing );
     }
 
