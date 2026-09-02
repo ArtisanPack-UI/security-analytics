@@ -12,12 +12,12 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        $userModel = config( 'artisanpack.security-analytics.user_model' )
-            ?? config( 'artisanpack.security.user_model' )
-            ?? config( 'auth.providers.users.model', 'App\\Models\\User' );
-        $userTable = (new $userModel())->getTable();
-
         if ( ! Schema::hasTable( 'suspicious_activities' ) ) {
+            $userModel = config( 'artisanpack.security-analytics.user_model' )
+                ?? config( 'artisanpack.security.user_model' )
+                ?? config( 'auth.providers.users.model', 'App\\Models\\User' );
+            $userTable = (new $userModel())->getTable();
+
             Schema::create( 'suspicious_activities', function ( Blueprint $table ) use ( $userTable ): void {
                 $table->id();
                 $table->foreignId( 'user_id' )->nullable()->constrained( $userTable )->nullOnDelete();
