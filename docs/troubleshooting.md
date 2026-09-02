@@ -70,9 +70,9 @@ The package's migrations run automatically when `RefreshDatabase` (or `DatabaseM
 
 ## Migration `2025_12_24_000008_create_suspicious_activities_table` conflicts with `security-auth`
 
-Both `security-analytics` and `security-advanced-auth` shipped a `suspicious_activities` migration during the extraction. They're the same table — running both packages requires guarding the second migration with `Schema::hasTable()`.
+Both `security-analytics` and `security-advanced-auth` shipped a `suspicious_activities` migration during the extraction. They're the same table.
 
-This is tracked as a follow-up bug ([#10](https://github.com/ArtisanPack-UI/security-analytics/issues/10)). Workaround: skip one of the two migrations manually, or pin the package versions until the guards land.
+As of 1.2.0 every `security-analytics` migration is guarded with `Schema::hasTable()`, so whichever package runs its migration first wins and the other is skipped automatically — no manual intervention needed ([#10](https://github.com/ArtisanPack-UI/security-analytics/issues/10)). If you're on an earlier version, skip one of the two migrations manually or upgrade to 1.2.0.
 
 ## Still stuck?
 
