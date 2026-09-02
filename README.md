@@ -116,7 +116,7 @@ The dashboard views ship as plain HTML + Tailwind by design — the package does
 ## Requirements
 
 - PHP 8.3+
-- Laravel 10 / 11 / 12 / 13
+- Laravel 11 / 12 / 13
 - `artisanpack-ui/ai` ^1.0.0-alpha.1 — foundation for the three AI features (see [AI features](#ai-features))
 - `livewire/livewire` ^3.6 or ^4.0 (only required for the dashboard UI + AI panels; the rest of the package works without Livewire)
 
