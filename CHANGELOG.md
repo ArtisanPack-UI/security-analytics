@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Dropped the advertised but non-functional Laravel 10 support. The models declare casts with the `casts()` method, which Laravel 11 introduced — on Laravel 10 that declaration overrode nothing, so every `array`, `datetime`, and enum cast silently returned the raw column value. The `illuminate/support` constraint is narrowed to `^11.0|^12.0|^13.0` to match what the code actually requires. Closes #25.
+
 ## [1.1.0] - 2026-07-07
 
 ### Added
